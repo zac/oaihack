@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		11BE2E602F351E1300748250 /* SwiftUIRender in Frameworks */ = {isa = PBXBuildFile; productRef = 11BE2E5F2F351E1300748250 /* SwiftUIRender */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		11D2ECC32F351CDB0064A932 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				11BE2E602F351E1300748250 /* SwiftUIRender in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = RenderChat;
 			packageProductDependencies = (
+				11BE2E5F2F351E1300748250 /* SwiftUIRender */,
 			);
 			productName = RenderChat;
 			productReference = 11D2ECB52F351CDA0064A932 /* RenderChat.app */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = 11D2ECAC2F351CDA0064A932;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				11BE2E5E2F351E1300748250 /* XCLocalSwiftPackageReference "../SwiftUIRender" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 11D2ECB62F351CDA0064A932 /* Products */;
 			projectDirPath = "";
@@ -615,6 +624,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		11BE2E5E2F351E1300748250 /* XCLocalSwiftPackageReference "../SwiftUIRender" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../SwiftUIRender;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		11BE2E5F2F351E1300748250 /* SwiftUIRender */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SwiftUIRender;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 11D2ECAD2F351CDA0064A932 /* Project object */;
 }
