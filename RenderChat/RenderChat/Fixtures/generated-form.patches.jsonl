@@ -1,0 +1,3 @@
+{"op":"replace","path":"/elements/subtitle/props/text","value":"Edit the fields, then submit the generated view"}
+{"op":"set","path":"/elements/badge","value":{"type":"badge","parentKey":"root","props":{"text":"Generated UI"},"styles":{"background-color":"#E9F2FF","color":"#1C4DA1"}}}
+{"op":"add","path":"/elements/root/children/children/2","value":"badge"}

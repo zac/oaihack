@@ -1,0 +1,64 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "root",
+      "children": {
+        "children": ["title", "subtitle", "nameField", "emailField", "submitButton"]
+      }
+    },
+    "title": {
+      "type": "text",
+      "parentKey": "root",
+      "props": {
+        "text": "Profile Intake"
+      },
+      "styles": {
+        "font-size": 24,
+        "font-weight": "bold"
+      }
+    },
+    "subtitle": {
+      "type": "text",
+      "parentKey": "root",
+      "props": {
+        "text": "Review and submit your details"
+      },
+      "styles": {
+        "color": "#666666"
+      }
+    },
+    "nameField": {
+      "type": "text-field",
+      "parentKey": "root",
+      "props": {
+        "placeholder": "Full name",
+        "binding": "$data.profile.fullName"
+      }
+    },
+    "emailField": {
+      "type": "text-field",
+      "parentKey": "root",
+      "props": {
+        "placeholder": "Email address",
+        "binding": "$data.profile.email"
+      }
+    },
+    "submitButton": {
+      "type": "button",
+      "parentKey": "root",
+      "props": {
+        "text": "Submit",
+        "action": {
+          "name": "submit",
+          "params": {
+            "payload": {
+              "intent": "profile_intake",
+              "version": "v1"
+            }
+          }
+        }
+      }
+    }
+  }
+}

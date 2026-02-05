@@ -16,11 +16,22 @@ struct ChatHarnessView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            controls
-            Divider()
+            if viewModel.showsDebugControls {
+                controls
+                Divider()
+            }
+
             transcript
         }
         .navigationTitle("RenderChat")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Clear") {
+                    viewModel.clearSession()
+                }
+                .accessibilityIdentifier("chat-clear-button")
+            }
+        }
         .safeAreaBar(edge: .bottom) {
             composer
         }
@@ -80,6 +91,7 @@ struct ChatHarnessView: View {
                     }
                 }
                 .safeAreaPadding(.horizontal, 20)
+                .padding(.vertical, 12)
             }
             .onChange(of: viewModel.messages.count) {
                 guard let lastID = viewModel.messages.last?.id else {
@@ -111,22 +123,46 @@ struct ChatHarnessView: View {
             }
 
         case let .render(content):
-            HStack {
-                if let payload = viewModel.payload(for: content.renderID) {
-                    AssistantRenderBubble(
-                        payload: payload,
-                        status: content.status,
-                        onDiagnostics: { issues in
-                            viewModel.receiveDiagnostics(renderID: content.renderID, issues: issues)
-                        }
-                    )
-                } else {
-                    TextBubble(text: "Render payload unavailable.", role: .system)
-                }
+            switch message.kind {
+            case .userRender:
+                HStack {
+                    Spacer(minLength: 24)
 
-                Spacer(minLength: 24)
+                    if let payload = viewModel.payload(for: content.renderID) {
+                        AssistantRenderBubble(
+                            payload: payload,
+                            status: content.status,
+                            role: .user,
+                            onDiagnostics: nil
+                        )
+                    } else {
+                        TextBubble(text: "Render payload unavailable.", role: .system)
+                    }
+                }
+                .accessibilityIdentifier("message-user-render-\(message.id.uuidString)")
+
+            case .assistantRender:
+                HStack {
+                    if let payload = viewModel.payload(for: content.renderID) {
+                        AssistantRenderBubble(
+                            payload: payload,
+                            status: content.status,
+                            role: .assistant,
+                            onDiagnostics: { issues in
+                                viewModel.receiveDiagnostics(renderID: content.renderID, issues: issues)
+                            }
+                        )
+                    } else {
+                        TextBubble(text: "Render payload unavailable.", role: .system)
+                    }
+
+                    Spacer(minLength: 24)
+                }
+                .accessibilityIdentifier("message-assistant-render-\(message.id.uuidString)")
+
+            default:
+                EmptyView()
             }
-            .accessibilityIdentifier("message-assistant-render-\(message.id.uuidString)")
 
         case let .system(system):
             HStack {
@@ -141,7 +177,18 @@ struct ChatHarnessView: View {
         }
     }
 
+    @ViewBuilder
     private var composer: some View {
+        switch viewModel.composerMode {
+        case .text:
+            textComposer
+
+        case let .takeover(takeover):
+            takeoverComposer(takeover)
+        }
+    }
+
+    private var textComposer: some View {
         HStack(alignment: .bottom, spacing: 12) {
             TextField(
                 "Prompt the assistant for a render",
@@ -151,28 +198,102 @@ struct ChatHarnessView: View {
                 ),
                 axis: .vertical
             )
-            .padding()
+            .padding(12)
             .textFieldStyle(.plain)
             .glassEffect(.regular, in: .containerRelative)
             .lineLimit(1 ... 4)
             .accessibilityIdentifier("chat-composer-input")
 
             if viewModel.isStreaming {
-                Button("Cancel") {
-                    viewModel.cancelStream()
-                }
-                .buttonStyle(.bordered)
-                .accessibilityIdentifier("chat-cancel-button")
+                iconButton(
+                    systemName: "stop.fill",
+                    accessibilityID: "chat-stop-button",
+                    action: viewModel.cancelStream
+                )
+            } else {
+                let canSend = !viewModel.composerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                iconButton(
+                    systemName: "arrow.up",
+                    accessibilityID: "chat-send-button",
+                    disabled: !canSend,
+                    action: viewModel.sendPrompt
+                )
             }
-
-            Button("Send") {
-                viewModel.sendPrompt()
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(viewModel.composerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            .accessibilityIdentifier("chat-send-button")
         }
         .padding(.horizontal)
+    }
+
+    private func takeoverComposer(_ takeover: TakeoverComposerState) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text("Generated UI Composer")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+
+                Spacer(minLength: 0)
+
+                Button {
+                    viewModel.dismissTakeover()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("chat-takeover-close-button")
+            }
+
+            if let payload = viewModel.payload(for: takeover.renderID) {
+                AssistantRenderBubble(
+                    payload: payload,
+                    status: takeover.status,
+                    role: .composer,
+                    onDiagnostics: { issues in
+                        viewModel.receiveDiagnostics(renderID: takeover.renderID, issues: issues)
+                    }
+                )
+                .accessibilityIdentifier("chat-takeover-render")
+            } else {
+                TextBubble(text: "Render payload unavailable.", role: .system)
+            }
+
+            if viewModel.canSubmitTakeoverFromComposer {
+                HStack {
+                    Spacer(minLength: 0)
+                    iconButton(
+                        systemName: "arrow.up",
+                        accessibilityID: "chat-takeover-submit-button",
+                        action: viewModel.submitTakeoverFromComposer
+                    )
+                }
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    private func iconButton(
+        systemName: String,
+        accessibilityID: String,
+        disabled: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.black)
+                .frame(width: 36, height: 36)
+                .background(Color.white, in: Circle())
+                .overlay(
+                    Circle()
+                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.14), radius: 4, x: 0, y: 2)
+        }
+        .buttonStyle(.plain)
+        .opacity(disabled ? 0.4 : 1.0)
+        .disabled(disabled)
+        .accessibilityIdentifier(accessibilityID)
     }
 
     private func applyUITestBootstrapIfNeeded() {
@@ -270,40 +391,6 @@ private struct TextBubble: View {
     }
 }
 
-struct MessageEntryView: View {
-    @Binding var message: String
-
-    var body: some View {
-        TextField(text: $message, prompt: Text("Enter your message...")) {
-            Text("HI")
-        }
-        .padding()
-        .glassEffect(.regular, in: .capsule)
-        .padding()
-    }
-}
-
-struct ChatView: View {
-    @State private var text: String = ""
-    var body: some View {
-        ScrollView {
-            VStack {
-                Spacer()
-                Text("HI")
-            }
-        }
-        .safeAreaBar(edge: .bottom) {
-            MessageEntryView(message: $text)
-        }
-    }
-}
-
-#Preview("Simplified Harness") {
-    NavigationStack {
-        ChatView()
-    }
-}
-
 #Preview("Chat Harness") {
     NavigationStack {
         ChatHarnessView()
@@ -350,6 +437,7 @@ private enum ChatHarnessPreviewFactory {
             ),
             makeRenderMessage(
                 renderID: renderID,
+                kind: .assistantRender,
                 status: .complete,
                 summaries: [
                     "render_started(\(renderID))",
@@ -374,6 +462,7 @@ private enum ChatHarnessPreviewFactory {
         let assistant = ChatMessage.assistantText("Streaming response: I started with profile fields and quick actions.")
         let render = makeRenderMessage(
             renderID: renderID,
+            kind: .assistantRender,
             status: .streaming,
             summaries: [
                 "render_started(\(renderID))",
@@ -413,6 +502,7 @@ private enum ChatHarnessPreviewFactory {
             ChatMessage.assistantText("Attempting local SSE connection and render setup."),
             makeRenderMessage(
                 renderID: renderID,
+                kind: .assistantRender,
                 status: .failed,
                 summaries: [
                     "render_started(\(renderID))",
@@ -435,10 +525,21 @@ private enum ChatHarnessPreviewFactory {
 
     private static func makeRenderMessage(
         renderID: String,
+        kind: ChatMessageKind,
         status: AssistantRenderStatus,
         summaries: [String]
     ) -> ChatMessage {
-        var message = ChatMessage.assistantRender(renderID: renderID)
+        var message: ChatMessage
+
+        switch kind {
+        case .assistantRender:
+            message = ChatMessage.assistantRender(renderID: renderID, status: status)
+        case .userRender:
+            message = ChatMessage.userRender(renderID: renderID, status: status)
+        default:
+            message = ChatMessage.assistantRender(renderID: renderID, status: status)
+        }
+
         guard case var .render(content) = message.content else {
             return message
         }
@@ -464,7 +565,8 @@ private enum ChatHarnessPreviewFactory {
             renderID: renderID,
             initialSpec: initialSpec,
             initialData: initialData,
-            onAction: { _ in }
+            submitTargets: SubmitActionInspector.inspect(spec: initialSpec),
+            onAction: { _, _ in }
         )
 
         let subtitlePatch = SpecPatch(

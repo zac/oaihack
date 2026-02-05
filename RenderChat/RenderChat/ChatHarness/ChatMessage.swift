@@ -4,6 +4,7 @@ import SwiftUIRender
 
 enum ChatMessageKind: String, Sendable {
     case userText
+    case userRender
     case assistantText
     case assistantRender
     case system
@@ -64,13 +65,32 @@ struct ChatMessage: Identifiable, Sendable, Equatable {
         ChatMessage(kind: .assistantText, content: .text(text))
     }
 
-    static func assistantRender(renderID: String) -> ChatMessage {
+    static func assistantRender(
+        renderID: String,
+        status: AssistantRenderStatus = .streaming
+    ) -> ChatMessage {
         ChatMessage(
             kind: .assistantRender,
             content: .render(
                 AssistantRenderMessageContent(
                     renderID: renderID,
-                    status: .streaming,
+                    status: status,
+                    rawEvents: []
+                )
+            )
+        )
+    }
+
+    static func userRender(
+        renderID: String,
+        status: AssistantRenderStatus = .complete
+    ) -> ChatMessage {
+        ChatMessage(
+            kind: .userRender,
+            content: .render(
+                AssistantRenderMessageContent(
+                    renderID: renderID,
+                    status: status,
                     rawEvents: []
                 )
             )
@@ -90,20 +110,32 @@ final class AssistantRenderPayload: Identifiable {
     let diagnostics: RenderDiagnostics
     let source: RenderSource
     let configuration: RenderConfiguration
+    let initialSpec: UISpec
+    let initialData: JSONValue
+    let submitTargets: [SubmitActionTarget]
+    let replayScenario: ReplayScenario?
 
     private let patchContinuation: AsyncStream<SpecPatch>.Continuation
     private var emittedIssueIDs: Set<String> = []
 
     var rawEvents: [ChatStreamEventLogEntry] = []
+    var patches: [SpecPatch] = []
+    var latestSubmitPayload: [String: JSONValue]?
 
     init(
         renderID: String,
         initialSpec: UISpec,
         initialData: JSONValue,
-        onAction: @escaping @Sendable (RenderAction) -> Void
+        submitTargets: [SubmitActionTarget] = [],
+        replayScenario: ReplayScenario? = nil,
+        onAction: @escaping @Sendable (String, RenderAction) -> Void
     ) {
         self.id = renderID
         self.renderID = renderID
+        self.initialSpec = initialSpec
+        self.initialData = initialData
+        self.submitTargets = submitTargets
+        self.replayScenario = replayScenario
 
         let patchStream = AsyncStream<SpecPatch>.makeStream()
         patchContinuation = patchStream.continuation
@@ -111,11 +143,12 @@ final class AssistantRenderPayload: Identifiable {
         diagnostics = RenderDiagnostics()
         configuration = RenderConfiguration(
             initialData: initialData,
-            actionHandler: TranscriptActionRelay(onAction: onAction)
+            actionHandler: TranscriptActionRelay(renderID: renderID, onAction: onAction)
         )
     }
 
     func append(patch: SpecPatch) {
+        patches.append(patch)
         patchContinuation.yield(patch)
     }
 
@@ -132,19 +165,53 @@ final class AssistantRenderPayload: Identifiable {
             emittedIssueIDs.insert(issue.id).inserted
         }
     }
+
+    func recordSubmit(payload: [String: JSONValue]) {
+        latestSubmitPayload = payload
+    }
+
+    var debugInitialSpecJSON: String {
+        Self.prettyJSONString(from: initialSpec) ?? "{}"
+    }
+
+    var debugInitialDataJSON: String {
+        Self.prettyJSONString(from: initialData) ?? "{}"
+    }
+
+    var debugPatchSequenceJSON: String {
+        Self.prettyJSONString(from: patches) ?? "[]"
+    }
+
+    var debugLatestSubmitPayloadJSON: String {
+        Self.prettyJSONString(from: latestSubmitPayload ?? [:]) ?? "{}"
+    }
+
+    private static func prettyJSONString<T: Encodable>(from value: T) -> String? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(value) else {
+            return nil
+        }
+        return String(data: data, encoding: .utf8)
+    }
 }
 
 private final class TranscriptActionRelay: RenderActionHandler, @unchecked Sendable {
-    private let onAction: @Sendable (RenderAction) -> Void
+    private let renderID: String
+    private let onAction: @Sendable (String, RenderAction) -> Void
 
-    init(onAction: @escaping @Sendable (RenderAction) -> Void) {
+    init(
+        renderID: String,
+        onAction: @escaping @Sendable (String, RenderAction) -> Void
+    ) {
+        self.renderID = renderID
         self.onAction = onAction
     }
 
     func handle(action: RenderAction, context: RenderActionContext) async {
         _ = context
         await MainActor.run {
-            onAction(action)
+            onAction(renderID, action)
         }
     }
 }

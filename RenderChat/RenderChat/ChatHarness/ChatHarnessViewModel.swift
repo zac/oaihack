@@ -10,11 +10,14 @@ final class ChatHarnessViewModel: AsyncViewModel {
         case composerChanged(String)
         case sendPrompt(String)
         case cancelStream
+        case clearSession
+        case dismissTakeover
+        case submitTakeoverFromComposer
         case switchMode(StreamMode)
         case selectReplayScenario(ReplayScenario)
         case receiveEvent(streamID: UUID, event: ChatStreamEvent)
         case receiveDiagnostics(renderID: String, issues: [GuardrailIssue])
-        case recordActionResult(String)
+        case handleRenderAction(renderID: String, action: RenderAction)
     }
 
     enum Mutation: Sendable {
@@ -25,12 +28,16 @@ final class ChatHarnessViewModel: AsyncViewModel {
             streamID: UUID,
             userMessage: ChatMessage,
             assistantTextMessage: ChatMessage,
-            cancelledPrevious: Bool
+            cancelledPrevious: Bool,
+            replayScenario: ReplayScenario?
         )
         case streamCancelled(reason: String)
         case streamEvent(streamID: UUID, event: ChatStreamEvent)
         case diagnostics(renderID: String, issues: [GuardrailIssue])
         case actionResult(String)
+        case takeoverDismissed(renderID: String, status: AssistantRenderStatus)
+        case takeoverSubmitted(renderID: String, payload: [String: JSONValue], assistantFollowup: String?)
+        case sessionCleared
     }
 
     let initialState: ChatHarnessState
@@ -40,6 +47,9 @@ final class ChatHarnessViewModel: AsyncViewModel {
 
     @ObservationIgnored
     private let localSSEClient: ChatStreamClient
+
+    @ObservationIgnored
+    private let debugControlsEnabled: Bool
 
     @ObservationIgnored
     private var streamTask: Task<Void, Never>?
@@ -52,12 +62,14 @@ final class ChatHarnessViewModel: AsyncViewModel {
             ReplayChatStreamClient(scenario: scenario)
         },
         localSSEClient: ChatStreamClient = LocalSSEChatStreamClient(),
+        debugControlsEnabled: Bool = ProcessInfo.processInfo.environment["RENDERCHAT_DEBUG_CONTROLS"] == "1",
         initialState: ChatHarnessState = ChatHarnessState(),
         initialRenderPayloads: [String: AssistantRenderPayload] = [:]
     ) {
         self.initialState = initialState
         self.replayClientFactory = replayClientFactory
         self.localSSEClient = localSSEClient
+        self.debugControlsEnabled = debugControlsEnabled
         renderPayloads = initialRenderPayloads
     }
 
@@ -100,6 +112,46 @@ final class ChatHarnessViewModel: AsyncViewModel {
 
             return .just(.streamCancelled(reason: "Cancelled current stream."))
 
+        case .clearSession:
+            streamTask?.cancel()
+            for payload in renderPayloads.values {
+                payload.finishStream()
+            }
+            renderPayloads.removeAll()
+            return .just(.sessionCleared)
+
+        case .dismissTakeover:
+            guard case let .takeover(takeover) = currentState.composerMode else {
+                return .empty()
+            }
+
+            return .just(
+                .takeoverDismissed(
+                    renderID: takeover.renderID,
+                    status: takeover.status
+                )
+            )
+
+        case .submitTakeoverFromComposer:
+            guard case let .takeover(takeover) = currentState.composerMode else {
+                return .empty()
+            }
+
+            guard let submitTarget = takeover.singleSubmitTarget else {
+                return .just(.actionResult("Takeover requires exactly one submit action."))
+            }
+
+            renderPayloads[takeover.renderID]?.recordSubmit(payload: submitTarget.payload)
+            let scenario = renderPayloads[takeover.renderID]?.replayScenario ?? takeover.replayScenario
+
+            return .just(
+                .takeoverSubmitted(
+                    renderID: takeover.renderID,
+                    payload: submitTarget.payload,
+                    assistantFollowup: Self.followupText(for: scenario)
+                )
+            )
+
         case let .sendPrompt(rawPrompt):
             let prompt = rawPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !prompt.isEmpty else {
@@ -114,17 +166,28 @@ final class ChatHarnessViewModel: AsyncViewModel {
                 }
             }
 
+            let replayScenario: ReplayScenario?
+            if currentState.mode == .replay {
+                replayScenario = Self.resolveReplayScenario(
+                    for: prompt,
+                    fallback: currentState.selectedReplayScenario
+                )
+            } else {
+                replayScenario = nil
+            }
+
             let streamID = UUID()
             let userMessage = ChatMessage.userText(prompt)
             let assistantTextMessage = ChatMessage.assistantText()
-            startStream(prompt: prompt, streamID: streamID)
+            startStream(prompt: prompt, streamID: streamID, replayScenario: replayScenario)
 
             return .just(
                 .streamStarted(
                     streamID: streamID,
                     userMessage: userMessage,
                     assistantTextMessage: assistantTextMessage,
-                    cancelledPrevious: cancelledPrevious
+                    cancelledPrevious: cancelledPrevious,
+                    replayScenario: replayScenario
                 )
             )
 
@@ -134,8 +197,28 @@ final class ChatHarnessViewModel: AsyncViewModel {
         case let .receiveDiagnostics(renderID, issues):
             return .just(.diagnostics(renderID: renderID, issues: issues))
 
-        case let .recordActionResult(result):
-            return .just(.actionResult(result))
+        case let .handleRenderAction(renderID, action):
+            switch action {
+            case let .submit(payload):
+                renderPayloads[renderID]?.recordSubmit(payload: payload)
+
+                if case let .takeover(takeover) = currentState.composerMode,
+                   takeover.renderID == renderID {
+                    let scenario = renderPayloads[renderID]?.replayScenario ?? takeover.replayScenario
+                    return .just(
+                        .takeoverSubmitted(
+                            renderID: renderID,
+                            payload: payload,
+                            assistantFollowup: Self.followupText(for: scenario)
+                        )
+                    )
+                }
+
+                return .just(.actionResult(Self.describe(action: action)))
+
+            default:
+                return .just(.actionResult(Self.describe(action: action)))
+            }
         }
     }
 
@@ -148,10 +231,12 @@ final class ChatHarnessViewModel: AsyncViewModel {
 
         case let .modeChanged(mode, cancelledStream):
             state.mode = mode
+            state.composerMode = .text
 
             if cancelledStream {
                 if let renderID = state.activeRenderID {
                     state = updateRenderStatus(for: renderID, status: .failed, in: state)
+                    state = updateTakeoverStatus(for: renderID, status: .failed, in: state)
                 }
                 state = stopStream(in: state)
                 state.messages.append(ChatMessage.system("Cancelled current stream due to mode switch."))
@@ -160,7 +245,7 @@ final class ChatHarnessViewModel: AsyncViewModel {
         case let .replayScenarioChanged(scenario):
             state.selectedReplayScenario = scenario
 
-        case let .streamStarted(streamID, userMessage, assistantTextMessage, cancelledPrevious):
+        case let .streamStarted(streamID, userMessage, assistantTextMessage, cancelledPrevious, replayScenario):
             if cancelledPrevious {
                 state.messages.append(ChatMessage.system("Cancelled previous stream before starting a new one."))
             }
@@ -169,14 +254,17 @@ final class ChatHarnessViewModel: AsyncViewModel {
             state.messages.append(assistantTextMessage)
 
             state.composerText = ""
+            state.composerMode = .text
             state.isStreaming = true
             state.activeStreamID = streamID
             state.activeAssistantTextMessageID = assistantTextMessage.id
             state.activeRenderID = nil
+            state.activeReplayScenario = replayScenario
 
         case let .streamCancelled(reason):
             if let renderID = state.activeRenderID {
                 state = updateRenderStatus(for: renderID, status: .failed, in: state)
+                state = updateTakeoverStatus(for: renderID, status: .failed, in: state)
             }
             state.messages.append(ChatMessage.system(reason))
             state = stopStream(in: state)
@@ -202,28 +290,50 @@ final class ChatHarnessViewModel: AsyncViewModel {
 
             case let .renderStarted(renderID, initialSpec, initialData):
                 if renderPayloads[renderID] == nil {
+                    let submitTargets = SubmitActionInspector.inspect(spec: initialSpec)
+
                     renderPayloads[renderID] = AssistantRenderPayload(
                         renderID: renderID,
                         initialSpec: initialSpec,
                         initialData: initialData,
-                        onAction: { [weak self] action in
+                        submitTargets: submitTargets,
+                        replayScenario: state.activeReplayScenario,
+                        onAction: { [weak self] callbackRenderID, action in
                             Task { @MainActor [weak self] in
                                 guard let self else { return }
-                                self.send(.recordActionResult(Self.describe(action: action)))
+                                self.send(.handleRenderAction(renderID: callbackRenderID, action: action))
                             }
                         }
                     )
                 }
 
                 renderPayloads[renderID]?.appendRawEvent(event)
-                state = ensureRenderMessage(for: renderID, in: state)
-                state = appendEventLog(event, toRenderMessage: renderID, in: state)
                 state.activeRenderID = renderID
+
+                let submitTargets = renderPayloads[renderID]?.submitTargets ?? []
+                if submitTargets.count == 1 {
+                    state.composerMode = .takeover(
+                        TakeoverComposerState(
+                            renderID: renderID,
+                            submitTargets: submitTargets,
+                            status: .streaming,
+                            replayScenario: state.activeReplayScenario
+                        )
+                    )
+                } else {
+                    state = ensureAssistantRenderMessage(
+                        for: renderID,
+                        status: .streaming,
+                        in: state
+                    )
+                }
+
+                state = appendEventLog(event, toAssistantRenderMessage: renderID, in: state)
 
             case let .renderPatch(renderID, patch):
                 renderPayloads[renderID]?.append(patch: patch)
                 renderPayloads[renderID]?.appendRawEvent(event)
-                state = appendEventLog(event, toRenderMessage: renderID, in: state)
+                state = appendEventLog(event, toAssistantRenderMessage: renderID, in: state)
 
                 if patch.path == "/root" {
                     state.messages.append(ChatMessage.system("Render root changed by patch stream."))
@@ -232,8 +342,9 @@ final class ChatHarnessViewModel: AsyncViewModel {
             case let .renderDone(renderID):
                 renderPayloads[renderID]?.appendRawEvent(event)
                 renderPayloads[renderID]?.finishStream()
-                state = appendEventLog(event, toRenderMessage: renderID, in: state)
+                state = appendEventLog(event, toAssistantRenderMessage: renderID, in: state)
                 state = updateRenderStatus(for: renderID, status: .complete, in: state)
+                state = updateTakeoverStatus(for: renderID, status: .complete, in: state)
 
             case let .guardrail(issue):
                 state = appendIssue(issue, in: state)
@@ -243,6 +354,7 @@ final class ChatHarnessViewModel: AsyncViewModel {
                 if let renderID = state.activeRenderID {
                     renderPayloads[renderID]?.finishStream()
                     state = updateRenderStatus(for: renderID, status: .failed, in: state)
+                    state = updateTakeoverStatus(for: renderID, status: .failed, in: state)
                 }
                 if state.mode == .localLive {
                     state.messages.append(
@@ -257,6 +369,7 @@ final class ChatHarnessViewModel: AsyncViewModel {
                 if let renderID = state.activeRenderID {
                     renderPayloads[renderID]?.finishStream()
                     state = updateRenderStatus(for: renderID, status: .complete, in: state)
+                    state = updateTakeoverStatus(for: renderID, status: .complete, in: state)
                 }
                 state = stopStream(in: state)
             }
@@ -268,6 +381,22 @@ final class ChatHarnessViewModel: AsyncViewModel {
 
         case let .actionResult(result):
             state.messages.append(ChatMessage.system(result))
+
+        case let .takeoverDismissed(renderID, status):
+            state = ensureAssistantRenderMessage(for: renderID, status: status, in: state)
+            state.composerMode = .text
+
+        case let .takeoverSubmitted(renderID, _, assistantFollowup):
+            state.messages.append(ChatMessage.userRender(renderID: renderID, status: .complete))
+            state.composerMode = .text
+
+            if let assistantFollowup,
+               !assistantFollowup.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                state.messages.append(ChatMessage.assistantText(assistantFollowup))
+            }
+
+        case .sessionCleared:
+            state = ChatHarnessState()
         }
 
         return state
@@ -281,6 +410,22 @@ final class ChatHarnessViewModel: AsyncViewModel {
         currentState.composerText
     }
 
+    var composerMode: ComposerMode {
+        currentState.composerMode
+    }
+
+    var takeoverComposerState: TakeoverComposerState? {
+        if case let .takeover(takeover) = currentState.composerMode {
+            return takeover
+        }
+
+        return nil
+    }
+
+    var canSubmitTakeoverFromComposer: Bool {
+        takeoverComposerState?.hasSingleSubmitTarget == true
+    }
+
     var streamMode: StreamMode {
         currentState.mode
     }
@@ -291,6 +436,10 @@ final class ChatHarnessViewModel: AsyncViewModel {
 
     var isStreaming: Bool {
         currentState.isStreaming
+    }
+
+    var showsDebugControls: Bool {
+        debugControlsEnabled
     }
 
     func payload(for renderID: String) -> AssistantRenderPayload? {
@@ -318,22 +467,33 @@ final class ChatHarnessViewModel: AsyncViewModel {
         send(.cancelStream)
     }
 
+    func clearSession() {
+        send(.clearSession)
+    }
+
+    func dismissTakeover() {
+        send(.dismissTakeover)
+    }
+
+    func submitTakeoverFromComposer() {
+        send(.submitTakeoverFromComposer)
+    }
+
     func receiveDiagnostics(renderID: String, issues: [GuardrailIssue]) {
         send(.receiveDiagnostics(renderID: renderID, issues: issues))
     }
 
-    func recordActionResult(_ result: String) {
-        send(.recordActionResult(result))
-    }
-
-    private func startStream(prompt: String, streamID: UUID) {
+    private func startStream(
+        prompt: String,
+        streamID: UUID,
+        replayScenario: ReplayScenario?
+    ) {
         let mode = currentState.mode
-        let scenario = currentState.selectedReplayScenario
         let client: ChatStreamClient
 
         switch mode {
         case .replay:
-            client = replayClientFactory(scenario)
+            client = replayClientFactory(replayScenario ?? currentState.selectedReplayScenario)
         case .localLive:
             client = localSSEClient
         }
@@ -361,32 +521,52 @@ final class ChatHarnessViewModel: AsyncViewModel {
         state.activeStreamID = nil
         state.activeAssistantTextMessageID = nil
         state.activeRenderID = nil
+        state.activeReplayScenario = nil
         return state
     }
 
-    private func ensureRenderMessage(for renderID: String, in state: ChatHarnessState) -> ChatHarnessState {
+    private func ensureAssistantRenderMessage(
+        for renderID: String,
+        status: AssistantRenderStatus,
+        in state: ChatHarnessState
+    ) -> ChatHarnessState {
         var state = state
-        let exists = state.messages.contains { message in
-            guard case let .render(content) = message.content else { return false }
+
+        guard !state.messages.contains(where: { message in
+            guard message.kind == .assistantRender,
+                  case let .render(content) = message.content
+            else {
+                return false
+            }
+
             return content.renderID == renderID
+        }) else {
+            return state
         }
 
-        if !exists {
-            state.messages.append(ChatMessage.assistantRender(renderID: renderID))
+        var message = ChatMessage.assistantRender(renderID: renderID, status: status)
+        if case var .render(content) = message.content {
+            content.rawEvents = renderPayloads[renderID]?.rawEvents ?? []
+            message.content = .render(content)
         }
 
+        state.messages.append(message)
         return state
     }
 
     private func appendEventLog(
         _ event: ChatStreamEvent,
-        toRenderMessage renderID: String,
+        toAssistantRenderMessage renderID: String,
         in state: ChatHarnessState
     ) -> ChatHarnessState {
         var state = state
 
         guard let index = state.messages.firstIndex(where: { message in
-            guard case let .render(content) = message.content else { return false }
+            guard message.kind == .assistantRender,
+                  case let .render(content) = message.content
+            else {
+                return false
+            }
             return content.renderID == renderID
         }), case var .render(content) = state.messages[index].content else {
             return state
@@ -405,7 +585,11 @@ final class ChatHarnessViewModel: AsyncViewModel {
         var state = state
 
         guard let index = state.messages.firstIndex(where: { message in
-            guard case let .render(content) = message.content else { return false }
+            guard message.kind == .assistantRender,
+                  case let .render(content) = message.content
+            else {
+                return false
+            }
             return content.renderID == renderID
         }), case var .render(content) = state.messages[index].content else {
             return state
@@ -413,6 +597,24 @@ final class ChatHarnessViewModel: AsyncViewModel {
 
         content.status = status
         state.messages[index].content = .render(content)
+        return state
+    }
+
+    private func updateTakeoverStatus(
+        for renderID: String,
+        status: AssistantRenderStatus,
+        in state: ChatHarnessState
+    ) -> ChatHarnessState {
+        var state = state
+
+        guard case var .takeover(takeover) = state.composerMode,
+              takeover.renderID == renderID
+        else {
+            return state
+        }
+
+        takeover.status = status
+        state.composerMode = .takeover(takeover)
         return state
     }
 
@@ -451,6 +653,51 @@ final class ChatHarnessViewModel: AsyncViewModel {
             return .warning
         case .error:
             return .error
+        }
+    }
+
+    private static func resolveReplayScenario(
+        for prompt: String,
+        fallback: ReplayScenario
+    ) -> ReplayScenario {
+        let normalized = prompt.lowercased()
+
+        if normalized.contains("guardrail") ||
+            normalized.contains("unsupported") ||
+            normalized.contains("invalid") {
+            return .guardrail
+        }
+
+        if normalized.contains("form") ||
+            normalized.contains("submit") ||
+            normalized.contains("checkout") ||
+            normalized.contains("profile") ||
+            normalized.contains("intake") {
+            return .generatedForm
+        }
+
+        if normalized.contains("support") ||
+            normalized.contains("ticket") ||
+            normalized.contains("dashboard") ||
+            normalized.contains("customer") {
+            return .supportDashboard
+        }
+
+        return fallback
+    }
+
+    private static func followupText(for scenario: ReplayScenario?) -> String? {
+        guard let scenario else {
+            return nil
+        }
+
+        switch scenario {
+        case .generatedForm:
+            return "Thanks. I captured your submitted UI and queued a deterministic follow-up render for the next turn."
+        case .supportDashboard:
+            return "Saved. I can stream another deterministic dashboard revision whenever you're ready."
+        case .guardrail:
+            return "Submission captured. Guardrail diagnostics remain available in the transcript."
         }
     }
 

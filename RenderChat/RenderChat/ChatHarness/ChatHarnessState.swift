@@ -19,6 +19,7 @@ enum StreamMode: String, CaseIterable, Sendable, Identifiable {
 enum ReplayScenario: String, CaseIterable, Sendable, Identifiable {
     case supportDashboard
     case guardrail
+    case generatedForm
 
     var id: String { rawValue }
 
@@ -28,13 +29,36 @@ enum ReplayScenario: String, CaseIterable, Sendable, Identifiable {
             return "Support Dashboard"
         case .guardrail:
             return "Guardrail"
+        case .generatedForm:
+            return "Generated Form"
         }
+    }
+}
+
+enum ComposerMode: Sendable, Equatable {
+    case text
+    case takeover(TakeoverComposerState)
+}
+
+struct TakeoverComposerState: Sendable, Equatable {
+    var renderID: String
+    var submitTargets: [SubmitActionTarget]
+    var status: AssistantRenderStatus
+    var replayScenario: ReplayScenario?
+
+    var hasSingleSubmitTarget: Bool {
+        submitTargets.count == 1
+    }
+
+    var singleSubmitTarget: SubmitActionTarget? {
+        hasSingleSubmitTarget ? submitTargets.first : nil
     }
 }
 
 struct ChatHarnessState: Sendable {
     var messages: [ChatMessage] = []
     var composerText: String = ""
+    var composerMode: ComposerMode = .text
 
     var mode: StreamMode = .replay
     var selectedReplayScenario: ReplayScenario = .supportDashboard
@@ -43,6 +67,7 @@ struct ChatHarnessState: Sendable {
     var activeStreamID: UUID?
     var activeAssistantTextMessageID: UUID?
     var activeRenderID: String?
+    var activeReplayScenario: ReplayScenario?
 
     var reportedIssueFingerprints: Set<String> = []
 }

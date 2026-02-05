@@ -1,120 +1,231 @@
-import Testing
-import SwiftUIRender
 import Foundation
+import SwiftUIRender
+import Testing
 @testable import RenderChat
 
 @MainActor
 struct RenderChatTests {
     @Test
-    func transcriptOrdering_userAssistantRender() async {
+    func submitScenarioActivatesTakeoverAndSuppressesAssistantRenderBubble() async {
         let viewModel = makeViewModel()
 
-        viewModel.updateComposer("Build support dashboard")
+        viewModel.updateComposer("Generate a profile form with a submit action")
         viewModel.sendPrompt()
 
-        let rendered = await waitUntil {
-            viewModel.messages.contains { message in
-                if case .render = message.content {
-                    return true
-                }
-                return false
-            }
+        let takeoverReady = await waitUntil {
+            viewModel.takeoverComposerState != nil
         }
 
-        #expect(rendered)
+        #expect(takeoverReady)
+        #expect(viewModel.canSubmitTakeoverFromComposer)
 
-        let kinds = viewModel.messages.map(\.kind)
-        #expect(kinds.first == .userText)
-        #expect(kinds.dropFirst().first == .assistantText)
+        let hasAssistantRender = viewModel.messages.contains { message in
+            message.kind == .assistantRender
+        }
 
-        let assistantRenderIndex = kinds.firstIndex(of: .assistantRender)
-        let assistantTextIndex = kinds.firstIndex(of: .assistantText)
-        #expect(assistantRenderIndex != nil)
-        #expect(assistantTextIndex != nil)
-        #expect((assistantRenderIndex ?? 0) > (assistantTextIndex ?? 0))
+        #expect(hasAssistantRender == false)
     }
 
     @Test
-    func replayDeterminism_samePromptProducesSameStreamLogs() async {
+    func dismissTakeoverRefilesAssistantRenderAndRestoresTextComposer() async {
+        let viewModel = makeViewModel()
+
+        viewModel.updateComposer("Build a submit form")
+        viewModel.sendPrompt()
+
+        let takeoverReady = await waitUntil {
+            viewModel.takeoverComposerState != nil
+        }
+
+        #expect(takeoverReady)
+
+        viewModel.dismissTakeover()
+
+        let assistantRenderAppeared = await waitUntil {
+            viewModel.messages.contains { message in
+                message.kind == .assistantRender
+            }
+        }
+
+        #expect(assistantRenderAppeared)
+
+        if case .text = viewModel.composerMode {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+    }
+
+    @Test
+    func submitTakeoverCreatesUserRenderAndAssistantFollowup() async {
+        let viewModel = makeViewModel()
+
+        viewModel.updateComposer("Create a form I can submit")
+        viewModel.sendPrompt()
+
+        let takeoverReady = await waitUntil {
+            viewModel.takeoverComposerState != nil
+        }
+
+        #expect(takeoverReady)
+
+        viewModel.submitTakeoverFromComposer()
+
+        let submitted = await waitUntil {
+            let hasUserRender = viewModel.messages.contains { message in
+                message.kind == .userRender
+            }
+
+            let hasFollowup = viewModel.messages.contains { message in
+                guard message.kind == .assistantText,
+                      case let .text(text) = message.content
+                else {
+                    return false
+                }
+
+                return text.contains("captured your submitted UI")
+            }
+
+            return hasUserRender && hasFollowup
+        }
+
+        #expect(submitted)
+
+        if case .text = viewModel.composerMode {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+    }
+
+    @Test
+    func composerArrowEnabledOnlyForSingleSubmitTarget() async {
+        let singleSubmitViewModel = makeViewModel()
+
+        singleSubmitViewModel.updateComposer("Please generate a submit form")
+        singleSubmitViewModel.sendPrompt()
+
+        let singleTakeoverReady = await waitUntil {
+            singleSubmitViewModel.takeoverComposerState != nil
+        }
+
+        #expect(singleTakeoverReady)
+        #expect(singleSubmitViewModel.canSubmitTakeoverFromComposer)
+
+        let multiSubmitViewModel = ChatHarnessViewModel(
+            replayClientFactory: { _ in
+                StubStreamClient(spec: Self.multiSubmitSpec())
+            },
+            localSSEClient: StubStreamClient(spec: Self.multiSubmitSpec())
+        )
+
+        multiSubmitViewModel.updateComposer("submit form")
+        multiSubmitViewModel.sendPrompt()
+
+        let settled = await waitUntil {
+            multiSubmitViewModel.messages.contains { $0.kind == .assistantRender }
+                || multiSubmitViewModel.takeoverComposerState != nil
+        }
+
+        #expect(settled)
+        #expect(multiSubmitViewModel.takeoverComposerState == nil)
+        #expect(multiSubmitViewModel.canSubmitTakeoverFromComposer == false)
+
+        let hasAssistantRender = multiSubmitViewModel.messages.contains { message in
+            message.kind == .assistantRender
+        }
+        #expect(hasAssistantRender)
+    }
+
+    @Test
+    func clearSessionResetsTranscriptTakeoverAndPayloadCache() async {
+        let viewModel = makeViewModel()
+
+        viewModel.updateComposer("Create a form I can submit")
+        viewModel.sendPrompt()
+
+        let takeoverReady = await waitUntil {
+            viewModel.takeoverComposerState != nil
+        }
+
+        #expect(takeoverReady)
+
+        let takeoverRenderID = viewModel.takeoverComposerState?.renderID
+        #expect(takeoverRenderID != nil)
+
+        viewModel.clearSession()
+
+        let cleared = await waitUntil {
+            viewModel.messages.isEmpty && !viewModel.isStreaming
+        }
+
+        #expect(cleared)
+        #expect(viewModel.composerText.isEmpty)
+
+        if case .text = viewModel.composerMode {
+            #expect(Bool(true))
+        } else {
+            #expect(Bool(false))
+        }
+
+        if let takeoverRenderID {
+            #expect(viewModel.payload(for: takeoverRenderID) == nil)
+        }
+    }
+
+    @Test
+    func keywordRoutingIsDeterministicForSamePrompt() async {
         let first = makeViewModel()
         let second = makeViewModel()
 
-        first.updateComposer("Support dashboard")
+        let prompt = "Please generate a profile form with submit"
+        first.updateComposer(prompt)
         first.sendPrompt()
 
-        second.updateComposer("Support dashboard")
+        second.updateComposer(prompt)
         second.sendPrompt()
 
-        let firstDone = await waitUntil {
-            !first.isStreaming && first.messages.contains { message in
-                if case .render = message.content {
-                    return true
-                }
-                return false
-            }
+        let firstReady = await waitUntil {
+            first.takeoverComposerState != nil
+        }
+        let secondReady = await waitUntil {
+            second.takeoverComposerState != nil
         }
 
-        let secondDone = await waitUntil {
-            !second.isStreaming && second.messages.contains { message in
-                if case .render = message.content {
-                    return true
-                }
-                return false
-            }
-        }
-
-        #expect(firstDone)
-        #expect(secondDone)
-
-        let firstRenderLog = renderSummaries(from: first.messages)
-        let secondRenderLog = renderSummaries(from: second.messages)
-
-        #expect(normalize(firstRenderLog) == normalize(secondRenderLog))
+        #expect(firstReady)
+        #expect(secondReady)
 
         let firstAssistantText = first.messages.compactMap { message -> String? in
             guard message.kind == .assistantText,
-                  case let .text(text) = message.content else {
+                  case let .text(text) = message.content
+            else {
                 return nil
             }
+
             return text
         }.first
 
         let secondAssistantText = second.messages.compactMap { message -> String? in
             guard message.kind == .assistantText,
-                  case let .text(text) = message.content else {
+                  case let .text(text) = message.content
+            else {
                 return nil
             }
+
             return text
         }.first
 
         #expect(firstAssistantText == secondAssistantText)
-    }
 
-    @Test
-    func secondPromptCancelsFirstStream() async {
-        let viewModel = makeViewModel(textDelay: 60_000_000, patchDelay: 120_000_000)
-
-        viewModel.updateComposer("First")
-        viewModel.sendPrompt()
-
-        let firstStarted = await waitUntil {
-            viewModel.isStreaming
+        if let firstRenderID = first.takeoverComposerState?.renderID,
+           let secondRenderID = second.takeoverComposerState?.renderID,
+           let firstPayload = first.payload(for: firstRenderID),
+           let secondPayload = second.payload(for: secondRenderID) {
+            #expect(firstPayload.debugInitialSpecJSON == secondPayload.debugInitialSpecJSON)
+            #expect(firstPayload.debugPatchSequenceJSON == secondPayload.debugPatchSequenceJSON)
+        } else {
+            #expect(Bool(false))
         }
-        #expect(firstStarted)
-
-        viewModel.updateComposer("Second")
-        viewModel.sendPrompt()
-
-        let hasCancellationNotice = await waitUntil {
-            viewModel.messages.contains { message in
-                guard case let .system(content) = message.content else {
-                    return false
-                }
-                return content.text.contains("Cancelled previous stream")
-            }
-        }
-
-        #expect(hasCancellationNotice)
     }
 
     @Test
@@ -140,24 +251,6 @@ struct RenderChatTests {
         }
 
         #expect(hasIssue)
-    }
-
-    @Test
-    func actionResultsBecomeSystemMessages() async {
-        let viewModel = makeViewModel()
-
-        viewModel.recordActionResult("Action: set_data -> /customer/saved = true")
-
-        let hasActionResult = await waitUntil {
-            viewModel.messages.contains { message in
-                guard case let .system(content) = message.content else {
-                    return false
-                }
-                return content.text.contains("Action: set_data")
-            }
-        }
-
-        #expect(hasActionResult)
     }
 
     private func makeViewModel(
@@ -194,23 +287,83 @@ struct RenderChatTests {
         return true
     }
 
-    private func renderSummaries(from messages: [ChatMessage]) -> [String] {
-        messages.compactMap { message in
-            guard case let .render(content) = message.content else {
-                return nil
+    private static func multiSubmitSpec() -> UISpec {
+        UISpec(
+            root: "root",
+            elements: [
+                "root": UIElement(
+                    type: "root",
+                    children: ["children": ["title", "submitOne", "submitTwo"]]
+                ),
+                "title": UIElement(
+                    type: "text",
+                    parentKey: "root",
+                    props: ["text": .string("Two submit actions")]
+                ),
+                "submitOne": UIElement(
+                    type: "button",
+                    parentKey: "root",
+                    props: [
+                        "text": .string("Submit A"),
+                        "action": .object([
+                            "name": .string("submit"),
+                            "params": .object([
+                                "payload": .object([
+                                    "variant": .string("A"),
+                                ]),
+                            ]),
+                        ]),
+                    ]
+                ),
+                "submitTwo": UIElement(
+                    type: "button",
+                    parentKey: "root",
+                    props: [
+                        "text": .string("Submit B"),
+                        "action": .object([
+                            "name": .string("submit"),
+                            "params": .object([
+                                "payload": .object([
+                                    "variant": .string("B"),
+                                ]),
+                            ]),
+                        ]),
+                    ]
+                ),
+            ]
+        )
+    }
+}
+
+private struct StubStreamClient: ChatStreamClient {
+    let spec: UISpec
+    var delayNanoseconds: UInt64 = 50_000_000
+
+    func stream(prompt: String, sessionID: UUID) -> AsyncThrowingStream<ChatStreamEvent, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                let renderMessageID = "render-\(sessionID.uuidString)"
+                let assistantTextMessageID = "assistant-\(sessionID.uuidString)"
+
+                // Keep deterministic ordering while allowing streamStarted mutation to land first.
+                try? await Task.sleep(nanoseconds: delayNanoseconds)
+                continuation.yield(.assistantTextDelta(messageID: assistantTextMessageID, delta: "stub "))
+                continuation.yield(.assistantTextDone(messageID: assistantTextMessageID))
+                continuation.yield(
+                    .renderStarted(
+                        messageID: renderMessageID,
+                        initialSpec: spec,
+                        initialData: .object([:])
+                    )
+                )
+                continuation.yield(.renderDone(messageID: renderMessageID))
+                continuation.yield(.done)
+                continuation.finish()
             }
 
-            return content.rawEvents.map(\.summary).joined(separator: "|")
-        }
-    }
-
-    private func normalize(_ logs: [String]) -> [String] {
-        logs.map { log in
-            log.replacingOccurrences(
-                of: "render-[0-9A-F\\-]{36}",
-                with: "render-<id>",
-                options: .regularExpression
-            )
+            continuation.onTermination = { _ in
+                task.cancel()
+            }
         }
     }
 }

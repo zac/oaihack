@@ -260,6 +260,37 @@ private struct ReplayScenarioScript {
                 patches: [],
                 initialData: .object([:])
             )
+
+        case .generatedForm:
+            let initialSpecData = try FixtureLocator.data(
+                named: "generated-form.spec",
+                ext: "json",
+                fallback: EmbeddedFixtures.generatedFormSpec
+            )
+            let patchLines = try FixtureLocator.lines(
+                named: "generated-form.patches",
+                ext: "jsonl",
+                fallback: EmbeddedFixtures.generatedFormPatches
+            )
+            let initialSpec = try JSONDecoder().decode(UISpec.self, from: initialSpecData)
+            let patches = try patchLines.map { line in
+                try JSONDecoder().decode(SpecPatch.self, from: Data(line.utf8))
+            }
+
+            let assistantText =
+                "I generated a profile intake form. Update the fields below and submit to place the rendered UI into the transcript."
+
+            return ReplayScenarioScript(
+                assistantTextChunks: assistantText.wordChunks,
+                initialSpec: initialSpec,
+                patches: patches,
+                initialData: .object([
+                    "profile": .object([
+                        "fullName": .string("Ava Stone"),
+                        "email": .string("ava@example.com"),
+                    ]),
+                ])
+            )
         }
     }
 }
@@ -375,6 +406,79 @@ private enum EmbeddedFixtures {
       }
     }
     """#
+
+    static let generatedFormSpec = #"""
+    {
+      "root": "root",
+      "elements": {
+        "root": {
+          "type": "root",
+          "children": {
+            "children": ["title", "subtitle", "nameField", "emailField", "submitButton"]
+          }
+        },
+        "title": {
+          "type": "text",
+          "parentKey": "root",
+          "props": {
+            "text": "Profile Intake"
+          },
+          "styles": {
+            "font-size": 24,
+            "font-weight": "bold"
+          }
+        },
+        "subtitle": {
+          "type": "text",
+          "parentKey": "root",
+          "props": {
+            "text": "Review and submit your details"
+          },
+          "styles": {
+            "color": "#666666"
+          }
+        },
+        "nameField": {
+          "type": "text-field",
+          "parentKey": "root",
+          "props": {
+            "placeholder": "Full name",
+            "binding": "$data.profile.fullName"
+          }
+        },
+        "emailField": {
+          "type": "text-field",
+          "parentKey": "root",
+          "props": {
+            "placeholder": "Email address",
+            "binding": "$data.profile.email"
+          }
+        },
+        "submitButton": {
+          "type": "button",
+          "parentKey": "root",
+          "props": {
+            "text": "Submit",
+            "action": {
+              "name": "submit",
+              "params": {
+                "payload": {
+                  "intent": "profile_intake",
+                  "version": "v1"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """#
+
+    static let generatedFormPatches = [
+        "{\"op\":\"replace\",\"path\":\"/elements/subtitle/props/text\",\"value\":\"Edit the fields, then submit the generated view\"}",
+        "{\"op\":\"set\",\"path\":\"/elements/badge\",\"value\":{\"type\":\"badge\",\"parentKey\":\"root\",\"props\":{\"text\":\"Generated UI\"},\"styles\":{\"background-color\":\"#E9F2FF\",\"color\":\"#1C4DA1\"}}}",
+        "{\"op\":\"add\",\"path\":\"/elements/root/children/children/2\",\"value\":\"badge\"}",
+    ]
 }
 
 private struct RenderChatStreamServer: ServerDefinition {
