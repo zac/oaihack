@@ -33,7 +33,7 @@ final class ChatHarnessViewModel: AsyncViewModel {
         case actionResult(String)
     }
 
-    let initialState = ChatHarnessState()
+    let initialState: ChatHarnessState
 
     @ObservationIgnored
     private let replayClientFactory: (ReplayScenario) -> ChatStreamClient
@@ -51,10 +51,14 @@ final class ChatHarnessViewModel: AsyncViewModel {
         replayClientFactory: @escaping (ReplayScenario) -> ChatStreamClient = { scenario in
             ReplayChatStreamClient(scenario: scenario)
         },
-        localSSEClient: ChatStreamClient = LocalSSEChatStreamClient()
+        localSSEClient: ChatStreamClient = LocalSSEChatStreamClient(),
+        initialState: ChatHarnessState = ChatHarnessState(),
+        initialRenderPayloads: [String: AssistantRenderPayload] = [:]
     ) {
+        self.initialState = initialState
         self.replayClientFactory = replayClientFactory
         self.localSSEClient = localSSEClient
+        renderPayloads = initialRenderPayloads
     }
 
     deinit {

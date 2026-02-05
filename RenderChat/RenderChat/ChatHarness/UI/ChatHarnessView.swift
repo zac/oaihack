@@ -1,18 +1,29 @@
 import SwiftUI
+import SwiftUIRender
 
 struct ChatHarnessView: View {
-    @State private var viewModel = ChatHarnessViewModel()
+    @State private var viewModel: ChatHarnessViewModel
     @State private var didHandleUITestBootstrap = false
+
+    init(viewModel: ChatHarnessViewModel) {
+        _viewModel = State(initialValue: viewModel)
+    }
+
+    @MainActor
+    init() {
+        self.init(viewModel: ChatHarnessViewModel())
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             controls
             Divider()
             transcript
-            Divider()
-            composer
         }
         .navigationTitle("RenderChat")
+        .safeAreaBar(edge: .bottom) {
+            composer
+        }
         .onAppear {
             guard didHandleUITestBootstrap == false else {
                 return
@@ -68,7 +79,7 @@ struct ChatHarnessView: View {
                             .id(message.id)
                     }
                 }
-                .padding(12)
+                .safeAreaPadding(.horizontal, 20)
             }
             .onChange(of: viewModel.messages.count) {
                 guard let lastID = viewModel.messages.last?.id else {
@@ -140,7 +151,9 @@ struct ChatHarnessView: View {
                 ),
                 axis: .vertical
             )
-            .textFieldStyle(.roundedBorder)
+            .padding()
+            .textFieldStyle(.plain)
+            .glassEffect(.regular, in: .containerRelative)
             .lineLimit(1 ... 4)
             .accessibilityIdentifier("chat-composer-input")
 
@@ -159,7 +172,7 @@ struct ChatHarnessView: View {
             .disabled(viewModel.composerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .accessibilityIdentifier("chat-send-button")
         }
-        .padding(12)
+        .padding(.horizontal)
     }
 
     private func applyUITestBootstrapIfNeeded() {
@@ -203,10 +216,10 @@ private struct TextBubble: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(background)
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(strokeColor, lineWidth: role == .system ? 1 : 0)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private var background: some ShapeStyle {
@@ -257,9 +270,269 @@ private struct TextBubble: View {
     }
 }
 
+struct MessageEntryView: View {
+    @Binding var message: String
+
+    var body: some View {
+        TextField(text: $message, prompt: Text("Enter your message...")) {
+            Text("HI")
+        }
+        .padding()
+        .glassEffect(.regular, in: .capsule)
+        .padding()
+    }
+}
+
+struct ChatView: View {
+    @State private var text: String = ""
+    var body: some View {
+        ScrollView {
+            VStack {
+                Spacer()
+                Text("HI")
+            }
+        }
+        .safeAreaBar(edge: .bottom) {
+            MessageEntryView(message: $text)
+        }
+    }
+}
+
+#Preview("Simplified Harness") {
+    NavigationStack {
+        ChatView()
+    }
+}
+
 #Preview("Chat Harness") {
     NavigationStack {
         ChatHarnessView()
     }
     .frame(minWidth: 420, minHeight: 780)
+}
+
+#Preview("Chat Harness - Completed Replay") {
+    NavigationStack {
+        ChatHarnessView(viewModel: ChatHarnessPreviewFactory.completedReplay())
+    }
+    .frame(minWidth: 420, minHeight: 780)
+}
+
+#Preview("Chat Harness - Streaming Replay") {
+    NavigationStack {
+        ChatHarnessView(viewModel: ChatHarnessPreviewFactory.streamingReplay())
+    }
+    .frame(minWidth: 420, minHeight: 780)
+}
+
+#Preview("Chat Harness - Local Live Error") {
+    NavigationStack {
+        ChatHarnessView(viewModel: ChatHarnessPreviewFactory.localLiveError())
+    }
+    .frame(minWidth: 420, minHeight: 780)
+}
+
+@MainActor
+private enum ChatHarnessPreviewFactory {
+    static func completedReplay() -> ChatHarnessViewModel {
+        let renderID = "preview-render-complete"
+        let payload = makeSupportPayload(renderID: renderID, streaming: false)
+
+        var state = ChatHarnessState()
+        state.mode = .replay
+        state.selectedReplayScenario = .supportDashboard
+        state.composerText = "Show me guardrail behavior next."
+        state.messages = [
+            ChatMessage.system("Replay mode loaded deterministic stream fixtures."),
+            ChatMessage.userText("Show me a support dashboard."),
+            ChatMessage.assistantText(
+                "I rendered a support dashboard from deterministic JSON patches. You can edit the customer name or press Save."
+            ),
+            makeRenderMessage(
+                renderID: renderID,
+                status: .complete,
+                summaries: [
+                    "render_started(\(renderID))",
+                    "render_patch(\(renderID)) replace /elements/subtitle/props/text",
+                    "render_done(\(renderID))",
+                ]
+            ),
+            ChatMessage.system("Action: set_data -> /customer/saved = true"),
+        ]
+
+        return ChatHarnessViewModel(
+            initialState: state,
+            initialRenderPayloads: [renderID: payload]
+        )
+    }
+
+    static func streamingReplay() -> ChatHarnessViewModel {
+        let renderID = "preview-render-streaming"
+        let payload = makeSupportPayload(renderID: renderID, streaming: true)
+
+        let user = ChatMessage.userText("Build a ticket triage UI for this customer.")
+        let assistant = ChatMessage.assistantText("Streaming response: I started with profile fields and quick actions.")
+        let render = makeRenderMessage(
+            renderID: renderID,
+            status: .streaming,
+            summaries: [
+                "render_started(\(renderID))",
+                "render_patch(\(renderID)) replace /elements/subtitle/props/text",
+            ]
+        )
+
+        var state = ChatHarnessState()
+        state.mode = .replay
+        state.selectedReplayScenario = .supportDashboard
+        state.messages = [
+            user,
+            assistant,
+            render,
+            ChatMessage.system("Streaming deterministic patch sequence..."),
+        ]
+        state.composerText = "Add ticket timeline and escalation button"
+        state.isStreaming = true
+        state.activeStreamID = UUID()
+        state.activeAssistantTextMessageID = assistant.id
+        state.activeRenderID = renderID
+
+        return ChatHarnessViewModel(
+            initialState: state,
+            initialRenderPayloads: [renderID: payload]
+        )
+    }
+
+    static func localLiveError() -> ChatHarnessViewModel {
+        let renderID = "preview-render-failed"
+        let payload = makeSupportPayload(renderID: renderID, streaming: false)
+
+        var state = ChatHarnessState()
+        state.mode = .localLive
+        state.messages = [
+            ChatMessage.userText("Connect to local stream and generate a billing summary."),
+            ChatMessage.assistantText("Attempting local SSE connection and render setup."),
+            makeRenderMessage(
+                renderID: renderID,
+                status: .failed,
+                summaries: [
+                    "render_started(\(renderID))",
+                    "error: Failed to decode SSE event: missing key 'initialSpec'",
+                ]
+            ),
+            ChatMessage.system("Failed to decode SSE event: missing key 'initialSpec'", level: .error),
+            ChatMessage.system(
+                "Local live stream failed. Switch to Replay mode to continue deterministic testing.",
+                level: .warning
+            ),
+        ]
+        state.composerText = "Use replay mode fallback"
+
+        return ChatHarnessViewModel(
+            initialState: state,
+            initialRenderPayloads: [renderID: payload]
+        )
+    }
+
+    private static func makeRenderMessage(
+        renderID: String,
+        status: AssistantRenderStatus,
+        summaries: [String]
+    ) -> ChatMessage {
+        var message = ChatMessage.assistantRender(renderID: renderID)
+        guard case var .render(content) = message.content else {
+            return message
+        }
+
+        content.status = status
+        content.rawEvents = summaries.map { ChatStreamEventLogEntry(summary: $0) }
+        message.content = .render(content)
+        return message
+    }
+
+    private static func makeSupportPayload(
+        renderID: String,
+        streaming: Bool
+    ) -> AssistantRenderPayload {
+        let initialData: JSONValue = .object([
+            "customer": .object([
+                "name": .string("Ava"),
+                "saved": .bool(false),
+            ]),
+        ])
+        let initialSpec = supportSpec()
+        let payload = AssistantRenderPayload(
+            renderID: renderID,
+            initialSpec: initialSpec,
+            initialData: initialData,
+            onAction: { _ in }
+        )
+
+        let subtitlePatch = SpecPatch(
+            op: .replace,
+            path: "/elements/subtitle/props/text",
+            value: .string("Ticket #1842 - Resolved")
+        )
+
+        payload.appendRawEvent(
+            .renderStarted(messageID: renderID, initialSpec: initialSpec, initialData: initialData)
+        )
+        payload.append(patch: subtitlePatch)
+        payload.appendRawEvent(.renderPatch(messageID: renderID, patch: subtitlePatch))
+
+        if streaming == false {
+            payload.appendRawEvent(.renderDone(messageID: renderID))
+            payload.finishStream()
+        }
+
+        return payload
+    }
+
+    private static func supportSpec() -> UISpec {
+        UISpec(
+            root: "root",
+            elements: [
+                "root": UIElement(
+                    type: "root",
+                    children: ["children": ["title", "subtitle", "nameField", "saveButton"]]
+                ),
+                "title": UIElement(
+                    type: "text",
+                    parentKey: "root",
+                    props: ["text": .string("Support Dashboard")],
+                    styles: [
+                        "font-size": .number(24),
+                        "font-weight": .string("bold"),
+                    ]
+                ),
+                "subtitle": UIElement(
+                    type: "text",
+                    parentKey: "root",
+                    props: ["text": .string("Ticket #1842 - Pending")],
+                    styles: ["color": .string("secondary")]
+                ),
+                "nameField": UIElement(
+                    type: "text-field",
+                    parentKey: "root",
+                    props: [
+                        "placeholder": .string("Customer name"),
+                        "binding": .string("$data.customer.name"),
+                    ]
+                ),
+                "saveButton": UIElement(
+                    type: "button",
+                    parentKey: "root",
+                    props: [
+                        "text": .string("Save Customer"),
+                        "action": .object([
+                            "name": .string("set_data"),
+                            "params": .object([
+                                "path": .string("$data.customer.saved"),
+                                "value": .bool(true),
+                            ]),
+                        ]),
+                    ]
+                ),
+            ]
+        )
+    }
 }
