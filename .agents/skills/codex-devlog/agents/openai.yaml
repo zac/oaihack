@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Devlog"
+  short_description: "Log how Codex accelerates development"
+  default_prompt: "Create a Codex session devlog entry capturing how Codex accelerated development."
