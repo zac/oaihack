@@ -1143,7 +1143,19 @@ const ChallengesScene = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const latestSession = devlogSessions.at(-1);
+  const latestRecoverySession = [...devlogSessions]
+    .reverse()
+    .find((session) => {
+      const summary = session.challengeSummary?.toLowerCase() ?? "";
+      const goal = session.primaryGoal.toLowerCase();
+      return (
+        summary.includes("rollback") ||
+        summary.includes("revert") ||
+        goal.includes("rollback") ||
+        goal.includes("revert")
+      );
+    });
+  const latestSession = latestRecoverySession ?? devlogSessions.at(-1);
   const recentChallenges = [...devlogSessions]
     .filter((session) => session.challengeSummary !== null)
     .slice(-6)
@@ -1158,6 +1170,10 @@ const ChallengesScene = () => {
   const latestBottleneck = latestSession?.bottlenecksRemoved
     ? truncate(latestSession.bottlenecksRemoved, 140)
     : "n/a";
+  const manualUiChallenge =
+    "Native SwiftUI UI/UX polish still needs hands-on manual intervention.";
+  const manualUiTradeoff =
+    "That is intentional for opinionated product quality, but it slows iteration throughput.";
 
   return (
     <AbsoluteFill
@@ -1171,8 +1187,8 @@ const ChallengesScene = () => {
         Challenges Encountered
       </h2>
       <p style={{ margin: "12px 0 0", fontSize: 27, color: colors.muted }}>
-        Captured from devlogs, including the latest recovery note that documents how
-        behavior was restored.
+        Captured from devlogs, including the latest rollback/recovery note that
+        documents how behavior was restored.
       </p>
       <div
         style={{
@@ -1275,6 +1291,32 @@ const ChallengesScene = () => {
                 </div>
               );
             })}
+          </div>
+          <div
+            style={{
+              borderRadius: 14,
+              border: "1px solid rgba(255, 122, 93, 0.32)",
+              background: "rgba(43, 19, 14, 0.62)",
+              padding: "12px 14px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 18,
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+                color: colors.accentHot,
+              }}
+            >
+              Ongoing UI/UX Constraint
+            </div>
+            <div style={{ fontSize: 22, lineHeight: 1.25 }}>{manualUiChallenge}</div>
+            <div style={{ fontSize: 20, lineHeight: 1.3, color: colors.muted }}>
+              {manualUiTradeoff}
+            </div>
           </div>
         </div>
         <div

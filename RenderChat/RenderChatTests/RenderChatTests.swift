@@ -266,6 +266,32 @@ struct RenderChatTests {
         #expect(didUpdate)
     }
 
+    @Test
+    func generatedFormStartsWithEmptyNameAndEmail() async {
+        let viewModel = makeViewModel()
+
+        viewModel.updateComposer("Generate a profile form with a submit action")
+        viewModel.sendPrompt()
+
+        let takeoverReady = await waitUntil {
+            viewModel.takeoverComposerState != nil
+        }
+        #expect(takeoverReady)
+
+        guard let renderID = viewModel.takeoverComposerState?.renderID,
+              let payload = viewModel.payload(for: renderID)
+        else {
+            Issue.record("missing generated-form payload")
+            return
+        }
+
+        let root = payload.initialData.objectValue ?? [:]
+        let profile = root["profile"]?.objectValue ?? [:]
+
+        #expect(profile["fullName"] == .string(""))
+        #expect(profile["email"] == .string(""))
+    }
+
     private func makeViewModel(
         textDelay: UInt64 = 1_000_000,
         patchDelay: UInt64 = 1_000_000

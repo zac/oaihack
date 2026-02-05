@@ -286,8 +286,8 @@ private struct ReplayScenarioScript {
                 patches: patches,
                 initialData: .object([
                     "profile": .object([
-                        "fullName": .string("Ava Stone"),
-                        "email": .string("ava@example.com"),
+                        "fullName": .string(""),
+                        "email": .string(""),
                     ]),
                 ])
             )

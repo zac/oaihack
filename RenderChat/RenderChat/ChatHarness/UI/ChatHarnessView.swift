@@ -133,6 +133,7 @@ struct ChatHarnessView: View {
                     TextBubble(text: text, role: .user)
                 }
                 .accessibilityIdentifier("message-user-\(message.id.uuidString)")
+                .disabled(true)
             } else {
                 HStack {
                     TextBubble(text: text, role: .assistant)
