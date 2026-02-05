@@ -146,6 +146,9 @@ final class ChatHarnessViewModel: AsyncViewModel {
             state.mode = mode
 
             if cancelledStream {
+                if let renderID = state.activeRenderID {
+                    state = updateRenderStatus(for: renderID, status: .failed, in: state)
+                }
                 state = stopStream(in: state)
                 state.messages.append(ChatMessage.system("Cancelled current stream due to mode switch."))
             }
@@ -168,6 +171,9 @@ final class ChatHarnessViewModel: AsyncViewModel {
             state.activeRenderID = nil
 
         case let .streamCancelled(reason):
+            if let renderID = state.activeRenderID {
+                state = updateRenderStatus(for: renderID, status: .failed, in: state)
+            }
             state.messages.append(ChatMessage.system(reason))
             state = stopStream(in: state)
 
@@ -230,6 +236,10 @@ final class ChatHarnessViewModel: AsyncViewModel {
 
             case let .error(message):
                 state.messages.append(ChatMessage.system(message, level: .error))
+                if let renderID = state.activeRenderID {
+                    renderPayloads[renderID]?.finishStream()
+                    state = updateRenderStatus(for: renderID, status: .failed, in: state)
+                }
                 if state.mode == .localLive {
                     state.messages.append(
                         ChatMessage.system(
@@ -404,6 +414,13 @@ final class ChatHarnessViewModel: AsyncViewModel {
 
     private func appendIssue(_ issue: GuardrailIssue, in state: ChatHarnessState) -> ChatHarnessState {
         var state = state
+
+        // Keep action narration in transcript via action handler callbacks.
+        // Diagnostics are reserved for guardrails and actionable warnings/errors.
+        if issue.severity == .info {
+            return state
+        }
+
         let fingerprint = Self.issueFingerprint(issue)
 
         guard !state.reportedIssueFingerprints.contains(fingerprint) else {
