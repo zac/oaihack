@@ -7,6 +7,24 @@ struct NodeMeta: Sendable, Equatable {
     var children: [String: [String]]
 }
 
+enum TextFieldKind: String, Sendable, Equatable, Codable {
+    case plain
+    case email
+    case url
+    case phone
+    case number
+    case name
+    case username
+    case password
+    case search
+}
+
+struct TextFieldNode: Sendable, Equatable {
+    var placeholder: String
+    var binding: BindingPath?
+    var kind: TextFieldKind
+}
+
 enum RenderNodeKind: Sendable, Equatable {
     case root(children: [String])
     case vStack(children: [String])
@@ -16,7 +34,7 @@ enum RenderNodeKind: Sendable, Equatable {
     case card(children: [String])
     case divider
     case button(title: String, action: RenderAction?)
-    case textField(placeholder: String, binding: BindingPath?)
+    case textField(TextFieldNode)
     case list(children: [String])
     case guardrail(message: String)
 }

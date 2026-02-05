@@ -66,14 +66,8 @@ struct NodeView: View {
             .buttonStyle(.borderedProminent)
             .applyForegroundStyle(box.node.style)
 
-        case let .textField(placeholder, binding):
-            if let binding {
-                TextField(placeholder, text: runtime.dataStore.stringBinding(path: binding))
-                    .textFieldStyle(.roundedBorder)
-                    .applyTextStyle(box.node.style)
-            } else {
-                GuardrailNodeView(message: "text-field missing valid binding")
-            }
+        case let .textField(config):
+            renderTextField(config)
 
         case let .list(children):
             VStack(alignment: .leading, spacing: box.node.style.gap ?? 8) {
@@ -104,6 +98,100 @@ struct NodeView: View {
                 GuardrailNodeView(message: "Missing child node '\(key)'")
             }
         }
+    }
+
+    @ViewBuilder
+    private func renderTextField(_ config: TextFieldNode) -> some View {
+        if let binding = config.binding {
+            let textBinding = runtime.dataStore.stringBinding(path: binding)
+
+            if config.kind == .password {
+                SecureField(config.placeholder, text: textBinding)
+                    .textFieldStyle(.roundedBorder)
+                    .applyInputTraits(config.kind)
+                    .applyTextStyle(box.node.style)
+            } else {
+                TextField(config.placeholder, text: textBinding)
+                    .textFieldStyle(.roundedBorder)
+                    .applyInputTraits(config.kind)
+                    .applyTextStyle(box.node.style)
+            }
+        } else {
+            GuardrailNodeView(message: "text-field missing valid binding")
+        }
+    }
+}
+
+private struct InputTraitsModifier: ViewModifier {
+    let kind: TextFieldKind
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        #if os(iOS) || os(tvOS) || os(visionOS)
+        switch kind {
+        case .plain:
+            content
+
+        case .email:
+            content
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled(true)
+                .textContentType(.emailAddress)
+
+        case .url:
+            content
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled(true)
+                .textContentType(.URL)
+
+        case .phone:
+            content
+                .keyboardType(.phonePad)
+                .textContentType(.telephoneNumber)
+
+        case .number:
+            content
+                .keyboardType(.numberPad)
+
+        case .name:
+            content
+                .textInputAutocapitalization(.words)
+                .textContentType(.name)
+
+        case .username:
+            content
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled(true)
+                .textContentType(.username)
+
+        case .password:
+            content
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled(true)
+                .textContentType(.password)
+
+        case .search:
+            content
+                .keyboardType(.webSearch)
+                .submitLabel(.search)
+        }
+        #else
+        switch kind {
+        case .search:
+            content
+                .submitLabel(.search)
+        default:
+            content
+        }
+        #endif
+    }
+}
+
+private extension View {
+    func applyInputTraits(_ kind: TextFieldKind) -> some View {
+        modifier(InputTraitsModifier(kind: kind))
     }
 }
 

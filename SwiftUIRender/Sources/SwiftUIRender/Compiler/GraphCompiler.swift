@@ -133,7 +133,10 @@ struct GraphCompiler {
             nodeKind = .text(content: text)
 
         case .badge:
-            let text = element.props["text"]?.stringValue ?? ""
+            let text = element.props["text"]?.stringValue
+                ?? element.props["label"]?.stringValue
+                ?? element.props["title"]?.stringValue
+                ?? ""
             nodeKind = .badge(content: text)
 
         case .card:
@@ -169,7 +172,17 @@ struct GraphCompiler {
                 }
             }
 
-            nodeKind = .textField(placeholder: placeholder, binding: bindingPath)
+            nodeKind = .textField(
+                TextFieldNode(
+                    placeholder: placeholder,
+                    binding: bindingPath,
+                    kind: inferTextFieldKind(
+                        element: element,
+                        bindingPath: bindingPath,
+                        placeholder: placeholder
+                    )
+                )
+            )
 
         case .list:
             nodeKind = .list(children: defaultChildren)
@@ -189,5 +202,93 @@ struct GraphCompiler {
         }
 
         return (finalNode, issues)
+    }
+
+    private func inferTextFieldKind(
+        element: UIElement,
+        bindingPath: BindingPath?,
+        placeholder: String
+    ) -> TextFieldKind {
+        let explicitHintKeys = [
+            "fieldType",
+            "inputType",
+            "type",
+            "keyboardType",
+            "textContentType",
+            "autocomplete",
+            "autoComplete",
+        ]
+
+        for key in explicitHintKeys {
+            if let value = element.props[key]?.stringValue,
+               let kind = textFieldKind(from: value) {
+                return kind
+            }
+        }
+
+        let heuristicHints: [String?] = [
+            bindingPath?.tokens.joined(separator: "."),
+            element.props["name"]?.stringValue,
+            element.props["id"]?.stringValue,
+            element.props["label"]?.stringValue,
+            placeholder,
+        ]
+
+        for hint in heuristicHints {
+            guard let hint,
+                  let kind = textFieldKind(from: hint) else {
+                continue
+            }
+            return kind
+        }
+
+        return .plain
+    }
+
+    private func textFieldKind(from hint: String) -> TextFieldKind? {
+        let direct = normalizedIdentifier(hint)
+        if let kind = mapTextFieldKindToken(direct) {
+            return kind
+        }
+
+        let tokens = hint
+            .lowercased()
+            .split { !$0.isLetter && !$0.isNumber }
+            .map { normalizedIdentifier(String($0)) }
+
+        for token in tokens {
+            if let kind = mapTextFieldKindToken(token) {
+                return kind
+            }
+        }
+
+        return nil
+    }
+
+    private func normalizedIdentifier(_ raw: String) -> String {
+        raw.lowercased().filter { $0.isLetter || $0.isNumber }
+    }
+
+    private func mapTextFieldKindToken(_ token: String) -> TextFieldKind? {
+        switch token {
+        case "email", "emailaddress", "mail":
+            return .email
+        case "url", "website", "link", "uri", "web":
+            return .url
+        case "phone", "phonenumber", "telephone", "tel", "mobile":
+            return .phone
+        case "number", "numeric", "decimal", "integer", "int":
+            return .number
+        case "name", "fullname", "firstname", "lastname", "givenname", "familyname":
+            return .name
+        case "username", "userid", "handle":
+            return .username
+        case "password", "passcode", "pin", "newpassword", "currentpassword":
+            return .password
+        case "search", "query":
+            return .search
+        default:
+            return nil
+        }
     }
 }

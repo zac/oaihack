@@ -88,6 +88,36 @@ func unknownComponentGuardrail() throws {
     #expect(output.issues.contains(where: { $0.message.contains("Unknown component type") }))
 }
 
+@Test("Badge supports label alias prop")
+func badgeSupportsLabelAlias() {
+    let spec = UISpec(
+        root: "root",
+        elements: [
+            "root": UIElement(type: "root", children: ["children": ["badge1"]]),
+            "badge1": UIElement(
+                type: "badge",
+                parentKey: "root",
+                props: ["label": .string("PRO")]
+            ),
+        ]
+    )
+
+    let output = GraphCompiler(configuration: .default).compile(spec: spec)
+    #expect(output.issues.isEmpty)
+
+    guard let node = output.graph.nodes["badge1"] else {
+        Issue.record("missing badge1 node")
+        return
+    }
+
+    guard case let .badge(content) = node.kind else {
+        Issue.record("expected badge node")
+        return
+    }
+
+    #expect(content == "PRO")
+}
+
 @Test("Invalid action payload emits validation error")
 func actionValidation() throws {
     var spec = makeMinimalSpec()
@@ -106,6 +136,73 @@ func actionValidation() throws {
 
     let output = GraphCompiler(configuration: .default).compile(spec: spec)
     #expect(output.issues.contains(where: { $0.message.contains("open_url requires params.url") }))
+}
+
+@Test("Text-field infers email traits from binding path")
+func textFieldInfersEmailKind() {
+    let spec = UISpec(
+        root: "root",
+        elements: [
+            "root": UIElement(type: "root", children: ["children": ["emailField"]]),
+            "emailField": UIElement(
+                type: "text-field",
+                parentKey: "root",
+                props: [
+                    "placeholder": .string("Email address"),
+                    "binding": .string("$data.profile.email"),
+                ]
+            ),
+        ]
+    )
+
+    let output = GraphCompiler(configuration: .default).compile(spec: spec)
+    #expect(output.issues.isEmpty)
+
+    guard let node = output.graph.nodes["emailField"] else {
+        Issue.record("missing emailField")
+        return
+    }
+
+    guard case let .textField(textFieldNode) = node.kind else {
+        Issue.record("expected text-field node")
+        return
+    }
+
+    #expect(textFieldNode.kind == .email)
+}
+
+@Test("Text-field honors explicit password fieldType")
+func textFieldExplicitPasswordKind() {
+    let spec = UISpec(
+        root: "root",
+        elements: [
+            "root": UIElement(type: "root", children: ["children": ["passwordField"]]),
+            "passwordField": UIElement(
+                type: "text-field",
+                parentKey: "root",
+                props: [
+                    "placeholder": .string("Password"),
+                    "binding": .string("$data.account.password"),
+                    "fieldType": .string("password"),
+                ]
+            ),
+        ]
+    )
+
+    let output = GraphCompiler(configuration: .default).compile(spec: spec)
+    #expect(output.issues.isEmpty)
+
+    guard let node = output.graph.nodes["passwordField"] else {
+        Issue.record("missing passwordField")
+        return
+    }
+
+    guard case let .textField(textFieldNode) = node.kind else {
+        Issue.record("expected text-field node")
+        return
+    }
+
+    #expect(textFieldNode.kind == .password)
 }
 
 @Test("Spec patch operations set/add/replace/remove mutate typed UISpec")
@@ -170,6 +267,40 @@ func runtimeIncrementalAndContinue() async throws {
 
     #expect(secondUpdate.delta != nil)
     #expect(secondUpdate.delta?.updatedNodes.keys.contains("text1") == true)
+}
+
+@Test("Runtime patch set/add supports badge insertion")
+func runtimePatchAddsBadge() async throws {
+    let engine = SpecRuntimeEngine(spec: makeMinimalSpec(), configuration: .default)
+    _ = await engine.bootstrap()
+
+    let badge = UIElement(
+        type: "badge",
+        parentKey: "root",
+        props: ["label": .string("NEW")]
+    )
+    let badgeValue = try JSONValueCodableBridge.encode(badge)
+
+    let setOutcome = await engine.apply(
+        SpecPatch(op: .set, path: "/elements/badge", value: badgeValue)
+    )
+    #expect(setOutcome.delta?.updatedNodes["badge"] == nil)
+
+    let addOutcome = await engine.apply(
+        SpecPatch(op: .add, path: "/elements/root/children/children/-", value: .string("badge"))
+    )
+
+    guard let badgeNode = addOutcome.delta?.updatedNodes["badge"] else {
+        Issue.record("expected badge node update after insertion")
+        return
+    }
+
+    guard case let .badge(content) = badgeNode.kind else {
+        Issue.record("expected badge node kind")
+        return
+    }
+
+    #expect(content == "NEW")
 }
 
 @Test("Runtime removed keys include detached subtree")

@@ -41,7 +41,7 @@ enum BuiltinCatalog {
         case .text:
             return ComponentDefinition(requiredProps: ["text"], defaultChildSlot: nil, defaultStyles: [:])
         case .badge:
-            return ComponentDefinition(requiredProps: ["text"], defaultChildSlot: nil, defaultStyles: [
+            return ComponentDefinition(requiredProps: [], defaultChildSlot: nil, defaultStyles: [
                 "padding": .number(8),
                 "border-radius": .number(999),
             ])
@@ -81,6 +81,18 @@ enum BuiltinCatalog {
                     severity: .error,
                     message: "Missing required prop '\(required)' for component '\(element.type)'",
                     path: "/elements/\(key)/props/\(required)"
+                )
+            )
+        }
+
+        if component == .badge,
+           element.props["text"] == nil,
+           element.props["label"] == nil {
+            issues.append(
+                GuardrailIssue(
+                    severity: .error,
+                    message: "Missing required prop 'text' or 'label' for component 'badge'",
+                    path: "/elements/\(key)/props"
                 )
             )
         }
