@@ -27,6 +27,7 @@ Submission requirements:
 - Submit via the official form once hacking is complete.
 - Submission includes a short one-minute demo video of what you built.
 - The demo video can be hosted on YouTube, Loom, or similar.
+- Submission link: https://cerebralvalley.ai/e/openai-codex-hackathon/hackathon/submit
 
 Judging criteria and weights:
 - Impact (25%): Long-term potential, fit to the problem statement, usefulness, and target user clarity.
@@ -40,3 +41,30 @@ Judging process:
 
 Schedule anchor:
 - Submissions due Thursday, February 5, 2026 at 4:00 PM PT.
+
+Event logistics (participant resources):
+- Event Discord server: https://discord.gg/8AMhSBEDtt
+- Location: OpenAI HQ SF, 1515 3rd Street, San Francisco, CA 94158.
+- Arrival: Complete Visitly pre-registration (NDA + media release). Bring QR code and government-issued photo ID.
+- Wifi: Username "OAI Hackathon" / Password "safetyfirst2026!".
+
+Hackathon schedule (Thursday, February 5, 2026):
+- 9:00 AM: Doors open, breakfast provided.
+- 10:00 AM: Kickoff with Greg Brockman.
+- 10:30 AM: Hacking starts (maximum team size 4).
+- 12:00 PM – 1:00 PM: Lunch served.
+- 4:00 PM: Submissions due.
+- 4:00 PM – 5:30 PM: First round judging.
+- 5:00 PM – 6:00 PM: Dinner served.
+- 6:00 PM – 7:00 PM: Final round judging and awards.
+- 7:00 PM – 9:00 PM: Reception.
+- 9:00 PM: Doors close.
+
+Prizes:
+- 1st place: $50,000 in OpenAI credits, 1 year of free ChatGPT Pro.
+- 2nd place: $30,000 in OpenAI credits, 1 year of free ChatGPT Pro.
+- 3rd place: $20,000 in OpenAI credits, 1 year of free ChatGPT Pro.
+
+Contact:
+- Email: wania@cerebralvalley.ai
+- Discord: https://discord.gg/8AMhSBEDtt
