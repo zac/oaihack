@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Hackathon Ideation"
+  short_description: "Ideation + story aligned to judging"
+  default_prompt: "Use $codex-hackathon-ideation to generate judged-aligned project ideas and a demo story."

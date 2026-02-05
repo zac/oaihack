@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex Hackathon Submission"
+  short_description: "Guide a strong Codex hackathon submission"
+  default_prompt: "Use $codex-hackathon-submission to craft a concise, compelling hackathon submission draft."
