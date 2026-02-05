@@ -77,6 +77,49 @@ const getTimeSavedMidpoint = (session: DevlogSession) => {
   );
 };
 
+const normalizeToolName = (tool: string) => {
+  const lower = tool.toLowerCase();
+  if (lower.includes("xcode mcp")) {
+    return "Xcode MCP";
+  }
+  if (lower.includes("swift test")) {
+    return "swift test";
+  }
+  if (lower.includes("apply_patch")) {
+    return "apply_patch";
+  }
+  if (lower.includes("terminal")) {
+    return "terminal";
+  }
+
+  return tool;
+};
+
+const formatToolsCompact = (tools: string[]) => {
+  if (tools.length === 0) {
+    return "n/a";
+  }
+
+  const primary = normalizeToolName(tools[0]);
+  if (tools.length === 1) {
+    return primary;
+  }
+
+  return `${primary} +${tools.length - 1}`;
+};
+
+const formatTimeSavedCompact = (session: DevlogSession) => {
+  if (session.timeSavedRangeMinutes) {
+    return formatRangeCompact(session.timeSavedRangeMinutes);
+  }
+
+  if (session.timeSavedLabel) {
+    return session.timeSavedLabel.replace(/\.$/, "");
+  }
+
+  return "n/a";
+};
+
 const Backdrop = () => {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
@@ -389,14 +432,26 @@ const TimelineScene = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const maxIndex = Math.max(1, devlogSessions.length - 1);
-  const lineStart = 170;
-  const lineWidth = 1580;
-  const lineY = 500;
-  const topCardY = 120;
-  const bottomCardY = 580;
-  const cardHeight = 250;
-  const cardWidth = 246;
+  const markerCount = devlogSessions.length + 1;
+  const maxIndex = Math.max(1, markerCount - 1);
+  const lineStart = 130;
+  const lineEnd = 1790;
+  const lineWidth = lineEnd - lineStart;
+  const lineY = 610;
+  const topCardY = 230;
+  const bottomCardY = 750;
+  const cardHeight = 228;
+  const slotWidth = lineWidth / maxIndex;
+  const cardWidth = Math.max(128, Math.min(228, slotWidth - 22));
+  const goalFontSize = cardWidth <= 150 ? 16 : 18;
+  const metadataFontSize = cardWidth <= 150 ? 13 : 14;
+  const deadlineIndex = markerCount - 1;
+  const deadlineX = lineStart + (lineWidth * deadlineIndex) / maxIndex;
+  const deadlineReveal = spring({
+    frame: frame - devlogSessions.length * 10,
+    fps,
+    config: { damping: 200 },
+  });
 
   const lineReveal = interpolate(
     frame,
@@ -441,11 +496,9 @@ const TimelineScene = () => {
         const connectorTop = index % 2 === 0 ? cardTop + cardHeight : lineY;
         const connectorHeight =
           index % 2 === 0 ? lineY - (cardTop + cardHeight) : cardTop - lineY;
-        const timeSaved = session.timeSavedLabel ? session.timeSavedLabel : "n/a";
-        const toolLabel =
-          session.tools.length > 0
-            ? truncate(session.tools.slice(0, 2).join(" + "), 30)
-            : "n/a";
+        const timeSaved = formatTimeSavedCompact(session);
+        const toolLabel = truncate(formatToolsCompact(session.tools), 20);
+        const goalMaxChars = Math.max(42, Math.round(cardWidth * 0.34));
 
         return (
           <div key={session.id}>
@@ -483,10 +536,10 @@ const TimelineScene = () => {
                 borderRadius: 18,
                 border: `1px solid ${colors.panelBorder}`,
                 background: colors.panel,
-                padding: "14px 14px 16px",
+                padding: "12px 12px 14px",
                 display: "flex",
                 flexDirection: "column",
-                gap: 8,
+                gap: 6,
                 opacity: reveal,
                 transform: `translateY(${interpolate(reveal, [0, 1], [18, 0])}px)`,
               }}
@@ -495,7 +548,7 @@ const TimelineScene = () => {
                 style={{
                   color: colors.accentWarm,
                   fontFamily: monoFont,
-                  fontSize: 24,
+                  fontSize: 22,
                   letterSpacing: "0.03em",
                 }}
               >
@@ -503,26 +556,241 @@ const TimelineScene = () => {
               </div>
               <div
                 style={{
-                  fontSize: 22,
+                  fontSize: goalFontSize,
                   lineHeight: 1.2,
                   fontWeight: 650,
+                  minHeight: goalFontSize * 4.2,
+                  display: "-webkit-box",
+                  WebkitLineClamp: 4,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
                 }}
               >
-                {truncate(session.primaryGoal, 95)}
+                {truncate(session.primaryGoal, goalMaxChars)}
               </div>
-              <div style={{ marginTop: "auto", fontSize: 18, color: colors.muted }}>
+              <div
+                style={{
+                  marginTop: "auto",
+                  fontSize: metadataFontSize,
+                  color: colors.muted,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
                 Tools: {toolLabel}
               </div>
-              <div style={{ fontSize: 18, color: colors.muted }}>
+              <div
+                style={{
+                  fontSize: metadataFontSize,
+                  color: colors.muted,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
                 Time saved: {timeSaved}
               </div>
-              <div style={{ fontSize: 18, color: colors.muted }}>
+              <div
+                style={{
+                  fontSize: metadataFontSize,
+                  color: colors.muted,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
                 Tests: {session.hasTests ? "yes" : "none"}
               </div>
             </div>
           </div>
         );
       })}
+      <div
+        style={{
+          position: "absolute",
+          left: deadlineX - 2,
+          top: lineY - 62,
+          width: 4,
+          height: 62,
+          background: "rgba(255, 190, 89, 0.42)",
+          opacity: deadlineReveal,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: deadlineX - 11,
+          top: lineY - 11,
+          width: 22,
+          height: 22,
+          borderRadius: 11,
+          background: colors.accentWarm,
+          boxShadow: "0 0 26px rgba(255,190,89,0.55)",
+          transform: `scale(${interpolate(deadlineReveal, [0, 1], [0.3, 1])})`,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: deadlineX - 96,
+          top: lineY - 124,
+          width: 192,
+          borderRadius: 12,
+          border: `1px solid rgba(255, 190, 89, 0.38)`,
+          background: "rgba(36, 25, 9, 0.7)",
+          color: colors.accentWarm,
+          textAlign: "center",
+          padding: "9px 10px",
+          fontSize: 22,
+          fontFamily: monoFont,
+          letterSpacing: "0.02em",
+          opacity: deadlineReveal,
+          transform: `translateY(${interpolate(deadlineReveal, [0, 1], [10, 0])}px)`,
+        }}
+      >
+        4:00 PM Deadline
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+type SkillGroup = {
+  title: string;
+  subtitle: string;
+  skills: string[];
+  accent: string;
+};
+
+const skillGroups: SkillGroup[] = [
+  {
+    title: "Build Tools",
+    subtitle: "Compile, project edits, and simulator-driven checks.",
+    skills: ["xcodebuild", "xcodeproj-edit", "sim-control"],
+    accent: colors.accent,
+  },
+  {
+    title: "Hackathon Helpers",
+    subtitle: "Idea shaping, judging alignment, and submission packaging.",
+    skills: ["codex-hackathon-ideation", "codex-hackathon-submission"],
+    accent: colors.accentWarm,
+  },
+  {
+    title: "Codex Devlog Visualization",
+    subtitle: "Session logging and storytelling through motion.",
+    skills: ["codex-devlog", "remotion"],
+    accent: colors.accentHot,
+  },
+];
+
+const SkillsScene = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+
+  return (
+    <AbsoluteFill
+      style={{
+        padding: "88px 100px",
+        color: colors.text,
+        fontFamily: displayFont,
+      }}
+    >
+      <h2 style={{ margin: 0, fontSize: 64, letterSpacing: "-0.02em" }}>
+        Codex Skills Map
+      </h2>
+      <p style={{ margin: "12px 0 0", fontSize: 27, color: colors.muted }}>
+        Grouped by how they support this hackathon build and demo flow.
+      </p>
+      <div
+        style={{
+          marginTop: 34,
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gap: 24,
+          flex: 1,
+        }}
+      >
+        {skillGroups.map((group, index) => {
+          const reveal = spring({
+            frame: frame - index * 10,
+            fps,
+            config: { damping: 200 },
+          });
+
+          return (
+            <div
+              key={group.title}
+              style={{
+                borderRadius: 22,
+                border: `1px solid ${colors.panelBorder}`,
+                background: colors.panel,
+                padding: "22px 22px 24px",
+                display: "flex",
+                flexDirection: "column",
+                opacity: reveal,
+                transform: `translateY(${interpolate(reveal, [0, 1], [20, 0])}px)`,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 31,
+                  lineHeight: 1.05,
+                  fontWeight: 700,
+                  color: group.accent,
+                }}
+              >
+                {group.title}
+              </div>
+              <div
+                style={{
+                  marginTop: 10,
+                  fontSize: 22,
+                  lineHeight: 1.3,
+                  color: colors.muted,
+                }}
+              >
+                {group.subtitle}
+              </div>
+              <div
+                style={{
+                  marginTop: 22,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                }}
+              >
+                {group.skills.map((skill, skillIndex) => {
+                  const chipReveal = spring({
+                    frame: frame - index * 10 - skillIndex * 5 - 4,
+                    fps,
+                    config: { damping: 200 },
+                  });
+
+                  return (
+                    <div
+                      key={skill}
+                      style={{
+                        borderRadius: 12,
+                        border: `1px solid ${colors.panelBorder}`,
+                        background: "rgba(8, 32, 46, 0.72)",
+                        color: colors.text,
+                        padding: "10px 12px",
+                        fontSize: 23,
+                        fontFamily: monoFont,
+                        letterSpacing: "0.01em",
+                        opacity: chipReveal,
+                        transform: `translateX(${interpolate(chipReveal, [0, 1], [-10, 0])}px)`,
+                      }}
+                    >
+                      {skill}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </AbsoluteFill>
   );
 };
@@ -733,6 +1001,7 @@ export const HackathonDevlogComposition = () => {
   const { fps } = useVideoConfig();
 
   const introDuration = 5 * fps;
+  const skillsDuration = 7 * fps;
   const kpiDuration = 8 * fps;
   const timelineDuration = 11 * fps;
   const impactDuration = 12 * fps;
@@ -745,20 +1014,27 @@ export const HackathonDevlogComposition = () => {
       </Sequence>
       <Sequence
         from={introDuration}
+        durationInFrames={skillsDuration}
+        premountFor={fps}
+      >
+        <SkillsScene />
+      </Sequence>
+      <Sequence
+        from={introDuration + skillsDuration}
         durationInFrames={kpiDuration}
         premountFor={fps}
       >
         <KpiScene />
       </Sequence>
       <Sequence
-        from={introDuration + kpiDuration}
+        from={introDuration + skillsDuration + kpiDuration}
         durationInFrames={timelineDuration}
         premountFor={fps}
       >
         <TimelineScene />
       </Sequence>
       <Sequence
-        from={introDuration + kpiDuration + timelineDuration}
+        from={introDuration + skillsDuration + kpiDuration + timelineDuration}
         durationInFrames={impactDuration}
         premountFor={fps}
       >
