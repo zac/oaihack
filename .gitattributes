@@ -1,0 +1,2 @@
+# Keep binary image snapshots in Git LFS.
+SwiftUIRender/Tests/SwiftUIRenderSnapshotTests/__Snapshots__/**/*.png filter=lfs diff=lfs merge=lfs -text

@@ -1,0 +1,48 @@
+▿ Optional<RenderNode>
+  ▿ some: RenderNode
+    - key: "root"
+    ▿ kind: RenderNodeKind
+      ▿ root: (1 element)
+        ▿ children: 3 elements
+          - "header"
+          - "nameField"
+          - "saveButton"
+    ▿ meta: NodeMeta
+      ▿ children: 1 key/value pair
+        ▿ (2 elements)
+          - key: "children"
+          ▿ value: 3 elements
+            - "header"
+            - "nameField"
+            - "saveButton"
+      - key: "root"
+      - parentKey: Optional<String>.none
+      - type: "root"
+    ▿ style: ResolvedStyle
+      - backgroundColor: Optional<String>.none
+      - borderColor: Optional<String>.none
+      - borderRadius: Optional<Double>.none
+      - borderWidth: Optional<Double>.none
+      - color: Optional<String>.none
+      - fontSize: Optional<Double>.none
+      - fontWeight: Optional<String>.none
+      - gap: Optional<Double>.none
+      - height: Optional<Double>.none
+      - lineHeight: Optional<Double>.none
+      ▿ margin: EdgeValueSet
+        - bottom: Optional<Double>.none
+        - leading: Optional<Double>.none
+        - top: Optional<Double>.none
+        - trailing: Optional<Double>.none
+      - maxHeight: Optional<Double>.none
+      - maxWidth: Optional<Double>.none
+      - minHeight: Optional<Double>.none
+      - minWidth: Optional<Double>.none
+      - opacity: Optional<Double>.none
+      ▿ padding: EdgeValueSet
+        - bottom: Optional<Double>.none
+        - leading: Optional<Double>.none
+        - top: Optional<Double>.none
+        - trailing: Optional<Double>.none
+      - textAlign: Optional<String>.none
+      - width: Optional<Double>.none

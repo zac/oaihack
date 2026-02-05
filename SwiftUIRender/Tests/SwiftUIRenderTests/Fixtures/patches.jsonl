@@ -1,0 +1,4 @@
+{"op":"replace","path":"/elements/header/props/text","value":"Ticket #1842"}
+{"op":"add","path":"/elements/root/children/children/-","value":"statusBadge"}
+{"op":"set","path":"/elements/statusBadge","value":{"type":"badge","parentKey":"root","props":{"text":"PENDING"}}}
+{"op":"remove","path":"/elements/nameField"}

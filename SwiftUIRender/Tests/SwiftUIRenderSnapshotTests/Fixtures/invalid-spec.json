@@ -1,0 +1,18 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "root",
+      "children": {
+        "children": ["unknownNode"]
+      }
+    },
+    "unknownNode": {
+      "type": "sparkle-grid",
+      "parentKey": "root",
+      "props": {
+        "text": "Not supported"
+      }
+    }
+  }
+}
