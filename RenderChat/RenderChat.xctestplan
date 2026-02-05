@@ -1,0 +1,39 @@
+{
+  "configurations" : [
+    {
+      "id" : "40E56049-6623-46E0-A970-0C7A9C0B75F0",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:RenderChat.xcodeproj",
+      "identifier" : "11D2ECB42F351CDA0064A932",
+      "name" : "RenderChat"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:RenderChat.xcodeproj",
+        "identifier" : "11D2ECC12F351CDB0064A932",
+        "name" : "RenderChatTests"
+      }
+    },
+    {
+      "enabled" : false,
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:RenderChat.xcodeproj",
+        "identifier" : "11D2ECCB2F351CDB0064A932",
+        "name" : "RenderChatUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

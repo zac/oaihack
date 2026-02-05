@@ -55,7 +55,8 @@ struct TakeoverComposerState: Sendable, Equatable {
     }
 }
 
-struct ChatHarnessState: Sendable {
+@Observable
+class ChatHarnessState: Sendable {
     var messages: [ChatMessage] = []
     var composerText: String = ""
     var composerMode: ComposerMode = .text

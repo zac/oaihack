@@ -13,7 +13,7 @@ struct AssistantRenderBubble: View {
     let role: RenderBubbleRole
     var onDiagnostics: (([GuardrailIssue]) -> Void)?
 
-    @State private var showDebugJSON = false
+    @State private var showDebugSheet = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -31,10 +31,13 @@ struct AssistantRenderBubble: View {
 
                 Spacer(minLength: 0)
 
-                Button(showDebugJSON ? "Hide Debug" : "Debug JSON") {
-                    showDebugJSON.toggle()
+                Button {
+                    showDebugSheet = true
+                } label: {
+                    Image(systemName: "ladybug")
+                        .font(.caption)
+                        .foregroundStyle(.gray)
                 }
-                .font(.caption)
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("render-debug-toggle-\(payload.renderID)")
             }
@@ -46,17 +49,6 @@ struct AssistantRenderBubble: View {
             )
             .frame(minHeight: 160)
 
-            if showDebugJSON {
-                VStack(alignment: .leading, spacing: 10) {
-                    debugSection(title: "Initial Spec", content: payload.debugInitialSpecJSON)
-                    debugSection(title: "Initial Data", content: payload.debugInitialDataJSON)
-                    debugSection(title: "Patch Sequence", content: payload.debugPatchSequenceJSON)
-                    debugSection(title: "Submit Payload", content: payload.debugLatestSubmitPayloadJSON)
-                    debugEvents
-                }
-                .padding(10)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -71,6 +63,11 @@ struct AssistantRenderBubble: View {
         }
         .onChange(of: payload.diagnostics.issues.count) {
             emitNewDiagnostics()
+        }
+        .sheet(isPresented: $showDebugSheet) {
+            DebugJSONSheet(payload: payload)
+                .presentationDetents([.medium, .large])
+                .presentationContentInteraction(.scrolls)
         }
     }
 
@@ -136,9 +133,55 @@ struct AssistantRenderBubble: View {
         }
     }
 
+    private func emitNewDiagnostics() {
+        guard let onDiagnostics else {
+            return
+        }
+
+        let issues = payload.consumeNewIssues()
+        guard !issues.isEmpty else {
+            return
+        }
+
+        onDiagnostics(issues)
+    }
+}
+
+private struct DebugJSONSheet: View {
+    let payload: AssistantRenderPayload
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    debugSection(title: "Initial Spec", content: payload.debugInitialSpecJSON)
+                    debugSection(title: "Initial Data", content: payload.debugInitialDataJSON)
+                    debugSection(title: "Patch Sequence", content: payload.debugPatchSequenceJSON)
+                    debugSection(title: "Submit Payload", content: payload.debugLatestSubmitPayloadJSON)
+                    debugEvents
+                }
+                .padding(16)
+            }
+            .navigationTitle("Debug JSON")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(role: .cancel) {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Close")
+                }
+            }
+        }
+    }
+
     @ViewBuilder
     private func debugSection(title: String, content: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -149,12 +192,11 @@ struct AssistantRenderBubble: View {
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxHeight: 120)
         }
     }
 
     private var debugEvents: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text("Stream Events")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -168,18 +210,5 @@ struct AssistantRenderBubble: View {
                 }
             }
         }
-    }
-
-    private func emitNewDiagnostics() {
-        guard let onDiagnostics else {
-            return
-        }
-
-        let issues = payload.consumeNewIssues()
-        guard !issues.isEmpty else {
-            return
-        }
-
-        onDiagnostics(issues)
     }
 }

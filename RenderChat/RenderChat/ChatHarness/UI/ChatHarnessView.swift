@@ -3,10 +3,12 @@ import SwiftUIRender
 
 struct ChatHarnessView: View {
     @State private var viewModel: ChatHarnessViewModel
+    @State private var composerDraft: String
     @State private var didHandleUITestBootstrap = false
 
     init(viewModel: ChatHarnessViewModel) {
         _viewModel = State(initialValue: viewModel)
+        _composerDraft = State(initialValue: viewModel.composerText)
     }
 
     @MainActor
@@ -23,11 +25,14 @@ struct ChatHarnessView: View {
 
             transcript
         }
+        .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("RenderChat")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Button("Clear") {
+                Button {
                     viewModel.clearSession()
+                } label: {
+                    Label("Clear", systemImage: "trash")
                 }
                 .accessibilityIdentifier("chat-clear-button")
             }
@@ -42,6 +47,20 @@ struct ChatHarnessView: View {
 
             didHandleUITestBootstrap = true
             applyUITestBootstrapIfNeeded()
+        }
+        .onChange(of: composerDraft) { _, newValue in
+            guard newValue != viewModel.composerText else {
+                return
+            }
+
+            viewModel.updateComposer(newValue)
+        }
+        .onChange(of: viewModel.composerText) { _, newValue in
+            guard newValue != composerDraft else {
+                return
+            }
+
+            composerDraft = newValue
         }
     }
 
@@ -192,10 +211,7 @@ struct ChatHarnessView: View {
         HStack(alignment: .bottom, spacing: 12) {
             TextField(
                 "Prompt the assistant for a render",
-                text: Binding(
-                    get: { viewModel.composerText },
-                    set: { viewModel.updateComposer($0) }
-                ),
+                text: $composerDraft,
                 axis: .vertical
             )
             .padding(12)
@@ -211,12 +227,12 @@ struct ChatHarnessView: View {
                     action: viewModel.cancelStream
                 )
             } else {
-                let canSend = !viewModel.composerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let canSend = !composerDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 iconButton(
                     systemName: "arrow.up",
                     accessibilityID: "chat-send-button",
                     disabled: !canSend,
-                    action: viewModel.sendPrompt
+                    action: { viewModel.sendPrompt(composerDraft) }
                 )
             }
         }
@@ -245,15 +261,17 @@ struct ChatHarnessView: View {
             }
 
             if let payload = viewModel.payload(for: takeover.renderID) {
-                AssistantRenderBubble(
-                    payload: payload,
-                    status: takeover.status,
-                    role: .composer,
-                    onDiagnostics: { issues in
-                        viewModel.receiveDiagnostics(renderID: takeover.renderID, issues: issues)
-                    }
-                )
-                .accessibilityIdentifier("chat-takeover-render")
+                CappedScrollContainer(maxHeight: 360) {
+                    AssistantRenderBubble(
+                        payload: payload,
+                        status: takeover.status,
+                        role: .composer,
+                        onDiagnostics: { issues in
+                            viewModel.receiveDiagnostics(renderID: takeover.renderID, issues: issues)
+                        }
+                    )
+                    .accessibilityIdentifier("chat-takeover-render")
+                }
             } else {
                 TextBubble(text: "Render payload unavailable.", role: .system)
             }
@@ -311,8 +329,9 @@ struct ChatHarnessView: View {
 
         if let prompt = environment["UITEST_AUTOSEND_PROMPT"],
            !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            composerDraft = prompt
             viewModel.updateComposer(prompt)
-            viewModel.sendPrompt()
+            viewModel.sendPrompt(prompt)
         }
     }
 }
@@ -388,6 +407,44 @@ private struct TextBubble: View {
                 return .red
             }
         }
+    }
+}
+
+private struct CappedScrollContainer<Content: View>: View {
+    let maxHeight: CGFloat
+    @ViewBuilder let content: () -> Content
+
+    @State private var contentHeight: CGFloat = 0
+
+    var body: some View {
+        ScrollView {
+            content()
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear.preference(
+                            key: CappedScrollHeightPreferenceKey.self,
+                            value: proxy.size.height
+                        )
+                    }
+                )
+        }
+        .scrollIndicators(.visible)
+        .scrollDisabled(contentHeight <= maxHeight)
+        .frame(height: effectiveHeight)
+        .onPreferenceChange(CappedScrollHeightPreferenceKey.self) { contentHeight = $0 }
+    }
+
+    private var effectiveHeight: CGFloat {
+        let measured = contentHeight > 0 ? contentHeight : 220
+        return min(measured, maxHeight)
+    }
+}
+
+private struct CappedScrollHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 

@@ -463,11 +463,21 @@ final class ChatHarnessViewModel: AsyncViewModel {
         send(.sendPrompt(currentState.composerText))
     }
 
+    func sendPrompt(_ prompt: String) {
+        send(.sendPrompt(prompt))
+    }
+
     func cancelStream() {
         send(.cancelStream)
     }
 
     func clearSession() {
+        streamTask?.cancel()
+        for payload in renderPayloads.values {
+            payload.finishStream()
+        }
+        renderPayloads.removeAll()
+        resetCurrentStateInMemory()
         send(.clearSession)
     }
 
@@ -523,6 +533,20 @@ final class ChatHarnessViewModel: AsyncViewModel {
         state.activeRenderID = nil
         state.activeReplayScenario = nil
         return state
+    }
+
+    private func resetCurrentStateInMemory() {
+        currentState.messages = []
+        currentState.composerText = ""
+        currentState.composerMode = .text
+        currentState.mode = .replay
+        currentState.selectedReplayScenario = .supportDashboard
+        currentState.isStreaming = false
+        currentState.activeStreamID = nil
+        currentState.activeAssistantTextMessageID = nil
+        currentState.activeRenderID = nil
+        currentState.activeReplayScenario = nil
+        currentState.reportedIssueFingerprints = []
     }
 
     private func ensureAssistantRenderMessage(

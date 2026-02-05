@@ -253,6 +253,19 @@ struct RenderChatTests {
         #expect(hasIssue)
     }
 
+    @Test
+    func updateComposerReflectsTypedText() async {
+        let viewModel = makeViewModel()
+
+        viewModel.updateComposer("hello world")
+
+        let didUpdate = await waitUntil {
+            viewModel.composerText == "hello world"
+        }
+
+        #expect(didUpdate)
+    }
+
     private func makeViewModel(
         textDelay: UInt64 = 1_000_000,
         patchDelay: UInt64 = 1_000_000

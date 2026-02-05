@@ -32,6 +32,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		11BE2E952F354C2000748250 /* RenderChat.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = file; path = RenderChat.xctestplan; sourceTree = "<group>"; };
 		11D2ECB52F351CDA0064A932 /* RenderChat.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RenderChat.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		11D2ECC22F351CDB0064A932 /* RenderChatTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RenderChatTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		11D2ECCC2F351CDB0064A932 /* RenderChatUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RenderChatUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -88,6 +89,7 @@
 		11D2ECAC2F351CDA0064A932 = {
 			isa = PBXGroup;
 			children = (
+				11BE2E952F354C2000748250 /* RenderChat.xctestplan */,
 				11D2ECB72F351CDA0064A932 /* RenderChat */,
 				11D2ECC52F351CDB0064A932 /* RenderChatTests */,
 				11D2ECCF2F351CDB0064A932 /* RenderChatUITests */,
