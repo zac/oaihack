@@ -1,0 +1,18 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "root",
+      "children": {
+        "children": ["bad"]
+      }
+    },
+    "bad": {
+      "type": "unknown-widget",
+      "parentKey": "root",
+      "props": {
+        "text": "This should trigger a guardrail"
+      }
+    }
+  }
+}

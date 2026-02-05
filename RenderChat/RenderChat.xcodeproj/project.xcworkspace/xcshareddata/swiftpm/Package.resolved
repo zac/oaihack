@@ -1,0 +1,33 @@
+{
+  "originHash" : "e8304a4d576256e76a95aedbb9b11b4355aff1d2137cd1f9c5a000bb314308cb",
+  "pins" : [
+    {
+      "identity" : "asyncserversentevents",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/velos/AsyncServerSentEvents",
+      "state" : {
+        "branch" : "main",
+        "revision" : "5ea675bfad3b8445e8b9543aa51e30f5bfdc19e7"
+      }
+    },
+    {
+      "identity" : "asyncviewmodel",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/velos/AsyncViewModel",
+      "state" : {
+        "branch" : "main",
+        "revision" : "c1848a46380d9fac950e1f25b276df617a49babe"
+      }
+    },
+    {
+      "identity" : "endpoints",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/velos/Endpoints",
+      "state" : {
+        "branch" : "authentication",
+        "revision" : "6da6988ecb68079b16670855c41adf2efe8d0444"
+      }
+    }
+  ],
+  "version" : 3
+}

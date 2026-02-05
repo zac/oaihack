@@ -1,0 +1,54 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "root",
+      "children": {
+        "children": ["title", "subtitle", "nameField", "saveButton"]
+      }
+    },
+    "title": {
+      "type": "text",
+      "parentKey": "root",
+      "props": {
+        "text": "Support Dashboard"
+      },
+      "styles": {
+        "font-size": 24,
+        "font-weight": "bold"
+      }
+    },
+    "subtitle": {
+      "type": "text",
+      "parentKey": "root",
+      "props": {
+        "text": "Ticket #1842 · Pending"
+      },
+      "styles": {
+        "color": "#666666"
+      }
+    },
+    "nameField": {
+      "type": "text-field",
+      "parentKey": "root",
+      "props": {
+        "placeholder": "Customer name",
+        "binding": "$data.customer.name"
+      }
+    },
+    "saveButton": {
+      "type": "button",
+      "parentKey": "root",
+      "props": {
+        "text": "Save",
+        "action": {
+          "name": "set_data",
+          "params": {
+            "path": "$data.customer.saved",
+            "value": true
+          }
+        }
+      }
+    }
+  }
+}

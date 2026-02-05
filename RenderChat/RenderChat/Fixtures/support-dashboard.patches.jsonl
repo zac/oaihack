@@ -1,0 +1,4 @@
+{"op":"replace","path":"/elements/subtitle/props/text","value":"Ticket #1842 · Assigned to Ava"}
+{"op":"set","path":"/elements/badge","value":{"type":"badge","parentKey":"root","props":{"text":"PRO"},"styles":{"background-color":"#DFF5E1","color":"#147A2E"}}}
+{"op":"add","path":"/elements/root/children/children/2","value":"badge"}
+{"op":"replace","path":"/elements/saveButton/props/text","value":"Saved"}

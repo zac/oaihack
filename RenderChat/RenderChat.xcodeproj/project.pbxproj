@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		11BE2E602F351E1300748250 /* SwiftUIRender in Frameworks */ = {isa = PBXBuildFile; productRef = 11BE2E5F2F351E1300748250 /* SwiftUIRender */; };
+		11BE2E652F3523D400748250 /* Endpoints in Frameworks */ = {isa = PBXBuildFile; productRef = 11BE2E642F3523D400748250 /* Endpoints */; };
+		11BE2E672F3523D400748250 /* EndpointsMocking in Frameworks */ = {isa = PBXBuildFile; productRef = 11BE2E662F3523D400748250 /* EndpointsMocking */; };
+		11BE2E6A2F35292900748250 /* AsyncViewModel in Frameworks */ = {isa = PBXBuildFile; productRef = 11BE2E692F35292900748250 /* AsyncViewModel */; };
+		11BE2E6D2F35294100748250 /* AsyncServerSentEvents in Frameworks */ = {isa = PBXBuildFile; productRef = 11BE2E6C2F35294100748250 /* AsyncServerSentEvents */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,7 +60,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				11BE2E6A2F35292900748250 /* AsyncViewModel in Frameworks */,
+				11BE2E6D2F35294100748250 /* AsyncServerSentEvents in Frameworks */,
 				11BE2E602F351E1300748250 /* SwiftUIRender in Frameworks */,
+				11BE2E652F3523D400748250 /* Endpoints in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -64,6 +71,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				11BE2E672F3523D400748250 /* EndpointsMocking in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -118,6 +126,9 @@
 			name = RenderChat;
 			packageProductDependencies = (
 				11BE2E5F2F351E1300748250 /* SwiftUIRender */,
+				11BE2E642F3523D400748250 /* Endpoints */,
+				11BE2E692F35292900748250 /* AsyncViewModel */,
+				11BE2E6C2F35294100748250 /* AsyncServerSentEvents */,
 			);
 			productName = RenderChat;
 			productReference = 11D2ECB52F351CDA0064A932 /* RenderChat.app */;
@@ -141,6 +152,7 @@
 			);
 			name = RenderChatTests;
 			packageProductDependencies = (
+				11BE2E662F3523D400748250 /* EndpointsMocking */,
 			);
 			productName = RenderChatTests;
 			productReference = 11D2ECC22F351CDB0064A932 /* RenderChatTests.xctest */;
@@ -203,6 +215,9 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				11BE2E5E2F351E1300748250 /* XCLocalSwiftPackageReference "../SwiftUIRender" */,
+				11BE2E632F3523D400748250 /* XCRemoteSwiftPackageReference "Endpoints" */,
+				11BE2E682F35292900748250 /* XCRemoteSwiftPackageReference "AsyncViewModel" */,
+				11BE2E6B2F35294100748250 /* XCRemoteSwiftPackageReference "AsyncServerSentEvents" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 11D2ECB62F351CDA0064A932 /* Products */;
@@ -632,10 +647,57 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		11BE2E632F3523D400748250 /* XCRemoteSwiftPackageReference "Endpoints" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/velos/Endpoints";
+			requirement = {
+				branch = authentication;
+				kind = branch;
+			};
+		};
+		11BE2E682F35292900748250 /* XCRemoteSwiftPackageReference "AsyncViewModel" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/velos/AsyncViewModel";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+		11BE2E6B2F35294100748250 /* XCRemoteSwiftPackageReference "AsyncServerSentEvents" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/velos/AsyncServerSentEvents";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		11BE2E5F2F351E1300748250 /* SwiftUIRender */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SwiftUIRender;
+		};
+		11BE2E642F3523D400748250 /* Endpoints */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 11BE2E632F3523D400748250 /* XCRemoteSwiftPackageReference "Endpoints" */;
+			productName = Endpoints;
+		};
+		11BE2E662F3523D400748250 /* EndpointsMocking */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 11BE2E632F3523D400748250 /* XCRemoteSwiftPackageReference "Endpoints" */;
+			productName = EndpointsMocking;
+		};
+		11BE2E692F35292900748250 /* AsyncViewModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 11BE2E682F35292900748250 /* XCRemoteSwiftPackageReference "AsyncViewModel" */;
+			productName = AsyncViewModel;
+		};
+		11BE2E6C2F35294100748250 /* AsyncServerSentEvents */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 11BE2E6B2F35294100748250 /* XCRemoteSwiftPackageReference "AsyncServerSentEvents" */;
+			productName = AsyncServerSentEvents;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

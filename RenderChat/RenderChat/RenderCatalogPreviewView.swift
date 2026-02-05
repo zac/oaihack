@@ -28,7 +28,7 @@ struct RenderCatalogPreviewView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Support Ticket")
                             .font(.headline)
-                        Text("#1842 \u00b7 Pending response")
+                        Text("#1842 \u{00B7} Pending response")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
