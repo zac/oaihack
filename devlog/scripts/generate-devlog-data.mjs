@@ -98,6 +98,10 @@ const parseClockTime = (dateTime) => {
   return match ? match[1] : "unknown";
 };
 
+const normalizeNarrativeLine = (value) => {
+  return value.replace(/^\s*-\s*/, "").replace(/\s+/g, " ").trim();
+};
+
 const parseTools = (rawTools) => {
   if (!rawTools) {
     return [];
@@ -165,6 +169,35 @@ const parseSession = async (fileName) => {
   const toolsUsed = readBullet(content, "Tools used") ?? "";
   const testsRun = readBullet(content, "Tests run") ?? "unknown";
   const timeSaved = readBullet(content, "Time saved (estimate)");
+  const beforeAfterRaw = readBullet(content, "Before/after");
+  const bottlenecksRemovedRaw = readBullet(content, "Bottlenecks removed");
+  const humanDecisionsRaw = readBullet(content, "Human decisions required");
+  const beforeAfter = beforeAfterRaw
+    ? normalizeNarrativeLine(beforeAfterRaw)
+    : null;
+  const bottlenecksRemoved = bottlenecksRemovedRaw
+    ? normalizeNarrativeLine(bottlenecksRemovedRaw)
+    : null;
+  const humanDecisions = humanDecisionsRaw
+    ? normalizeNarrativeLine(humanDecisionsRaw)
+    : null;
+
+  const primaryLower = primaryGoal.toLowerCase();
+  const isRollbackSession =
+    primaryLower.includes("revert") ||
+    primaryLower.includes("rollback") ||
+    primaryLower.includes("restore previous behavior");
+
+  let challengeSummary = null;
+  if (isRollbackSession) {
+    challengeSummary = `Rollback: ${primaryGoal}`;
+  } else if (bottlenecksRemovedRaw) {
+    challengeSummary = `Bottleneck: ${bottlenecksRemoved}`;
+  } else if (beforeAfterRaw) {
+    challengeSummary = `Tradeoff: ${beforeAfter}`;
+  } else if (humanDecisionsRaw) {
+    challengeSummary = `Decision: ${humanDecisions}`;
+  }
 
   return {
     id: fileName.replace(/\.md$/, ""),
@@ -178,6 +211,10 @@ const parseSession = async (fileName) => {
     timeSavedLabel: timeSaved ? normalizeScalar(timeSaved) : null,
     timeSavedRangeMinutes: parseTimeSavedRangeMinutes(timeSaved),
     codexActionCount: countBulletsInSection(content, "What Codex Did"),
+    beforeAfter: beforeAfter ?? null,
+    bottlenecksRemoved: bottlenecksRemoved ?? null,
+    humanDecisions: humanDecisions ?? null,
+    challengeSummary,
   };
 };
 
@@ -195,6 +232,9 @@ const totalCodexActions = sessions.reduce(
   (total, session) => total + session.codexActionCount,
   0,
 );
+const challengeSessionCount = sessions.filter(
+  (session) => session.challengeSummary !== null,
+).length;
 
 const totalTimeRangeMinutes = sessions.reduce(
   (range, session) => {
@@ -213,6 +253,7 @@ const totalTimeRangeMinutes = sessions.reduce(
 const summary = {
   sessionCount: sessions.length,
   testedSessionCount,
+  challengeSessionCount,
   uniqueTools,
   totalCodexActions,
   totalTimeRangeMinutes,
@@ -238,11 +279,16 @@ export type DevlogSession = {
   timeSavedLabel: string | null;
   timeSavedRangeMinutes: [number, number] | null;
   codexActionCount: number;
+  beforeAfter: string | null;
+  bottlenecksRemoved: string | null;
+  humanDecisions: string | null;
+  challengeSummary: string | null;
 };
 
 export type DevlogSummary = {
   sessionCount: number;
   testedSessionCount: number;
+  challengeSessionCount: number;
   uniqueTools: string[];
   totalCodexActions: number;
   totalTimeRangeMinutes: [number, number];

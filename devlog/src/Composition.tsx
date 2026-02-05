@@ -683,9 +683,21 @@ const skillGroups: SkillGroup[] = [
   },
 ];
 
+const automationHighlights = [
+  "Codex App -> Automations",
+  "Recurring task: add Codex devlog entry",
+  "Interval schedule: runs regularly during hackathon build loops",
+  "Output target: codex-log/YYYY-MM-DD_HHMM-<slug>.md",
+];
+
 const SkillsScene = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const automationReveal = spring({
+    frame: frame - 28,
+    fps,
+    config: { damping: 200 },
+  });
 
   return (
     <AbsoluteFill
@@ -790,6 +802,597 @@ const SkillsScene = () => {
             </div>
           );
         })}
+      </div>
+      <div
+        style={{
+          marginTop: 18,
+          borderRadius: 18,
+          border: `1px solid rgba(46, 217, 196, 0.35)`,
+          background: "rgba(9, 37, 45, 0.78)",
+          padding: "16px 18px",
+          display: "flex",
+          alignItems: "center",
+          gap: 18,
+          opacity: automationReveal,
+          transform: `translateY(${interpolate(automationReveal, [0, 1], [14, 0])}px)`,
+        }}
+      >
+        <div
+          style={{
+            borderRadius: 11,
+            border: "1px solid rgba(46, 217, 196, 0.35)",
+            background: "rgba(46, 217, 196, 0.12)",
+            color: colors.accent,
+            fontSize: 18,
+            letterSpacing: "0.05em",
+            textTransform: "uppercase",
+            padding: "7px 10px",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Codex App Automations
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "8px 16px",
+            width: "100%",
+          }}
+        >
+          {automationHighlights.map((item, index) => {
+            const itemReveal = spring({
+              frame: frame - 32 - index * 4,
+              fps,
+              config: { damping: 200 },
+            });
+
+            return (
+              <div
+                key={item}
+                style={{
+                  color: colors.muted,
+                  fontSize: 19,
+                  lineHeight: 1.25,
+                  opacity: itemReveal,
+                  transform: `translateX(${interpolate(itemReveal, [0, 1], [-8, 0])}px)`,
+                }}
+              >
+                {item}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+const mcpLoopSteps = [
+  {
+    title: "Edit Workspace Files",
+    detail: "Patch Swift sources, fixtures, and tests inside the Codex App.",
+  },
+  {
+    title: "xcode MCP BuildProject",
+    detail: "Compile after each patch to catch regressions immediately.",
+  },
+  {
+    title: "xcode MCP RunSomeTests",
+    detail: "Run focused tests for the changed feature surface.",
+  },
+  {
+    title: "xcode MCP RunAllTests",
+    detail: "Checkpoint with wider test coverage before handoff.",
+  },
+  {
+    title: "xcode MCP XcodeListNavigatorIssues",
+    detail: "Inspect remaining diagnostics and close the loop.",
+  },
+];
+
+const mcpActivityLines = [
+  "Edited ChatStreamClient.swift +106 -7",
+  "Called xcode MCP BuildProject tool",
+  "Called xcode MCP RunSomeTests tool",
+  "Called xcode MCP XcodeListNavigatorIssues tool",
+  "Edited RenderChatUITests.swift +17 -8",
+  "Called xcode MCP RunAllTests tool",
+];
+
+const TechnicalFlowScene = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const sceneReveal = spring({
+    frame,
+    fps,
+    config: { damping: 200 },
+  });
+
+  return (
+    <AbsoluteFill
+      style={{
+        padding: "84px 94px",
+        color: colors.text,
+        fontFamily: displayFont,
+      }}
+    >
+      <h2
+        style={{
+          margin: 0,
+          fontSize: 62,
+          letterSpacing: "-0.02em",
+          opacity: sceneReveal,
+          transform: `translateY(${interpolate(sceneReveal, [0, 1], [12, 0])}px)`,
+        }}
+      >
+        Codex App Technical Flow
+      </h2>
+      <p
+        style={{
+          margin: "12px 0 0",
+          fontSize: 27,
+          color: colors.muted,
+          maxWidth: 1400,
+          opacity: sceneReveal,
+        }}
+      >
+        Built exclusively in the Codex App, using the Xcode 26.3 MCP server as the
+        core build-and-test feedback loop.
+      </p>
+      <div
+        style={{
+          marginTop: 20,
+          display: "flex",
+          gap: 10,
+        }}
+      >
+        {["Codex App only", "Xcode MCP 26.3", "Build/Test loop"].map(
+          (badge, index) => {
+            const badgeReveal = spring({
+              frame: frame - index * 5,
+              fps,
+              config: { damping: 200 },
+            });
+
+            return (
+              <div
+                key={badge}
+                style={{
+                  borderRadius: 999,
+                  border: `1px solid ${colors.panelBorder}`,
+                  background: "rgba(8, 32, 46, 0.76)",
+                  color: colors.accent,
+                  padding: "8px 13px",
+                  fontSize: 19,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  opacity: badgeReveal,
+                  transform: `translateY(${interpolate(badgeReveal, [0, 1], [8, 0])}px)`,
+                }}
+              >
+                {badge}
+              </div>
+            );
+          },
+        )}
+      </div>
+      <div
+        style={{
+          marginTop: 22,
+          display: "grid",
+          gridTemplateColumns: "1.05fr 0.95fr",
+          gap: 22,
+          flex: 1,
+        }}
+      >
+        <div
+          style={{
+            borderRadius: 22,
+            border: `1px solid ${colors.panelBorder}`,
+            background: colors.panel,
+            padding: "18px 20px 20px",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 25,
+              color: colors.accentWarm,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              marginBottom: 12,
+            }}
+          >
+            Loop Steps
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {mcpLoopSteps.map((step, index) => {
+              const stepReveal = spring({
+                frame: frame - 6 - index * 6,
+                fps,
+                config: { damping: 200 },
+              });
+
+              return (
+                <div
+                  key={step.title}
+                  style={{
+                    borderRadius: 14,
+                    border: `1px solid ${colors.panelBorder}`,
+                    background: "rgba(8, 32, 46, 0.66)",
+                    padding: "10px 12px",
+                    display: "grid",
+                    gridTemplateColumns: "38px 1fr",
+                    gap: 10,
+                    opacity: stepReveal,
+                    transform: `translateX(${interpolate(stepReveal, [0, 1], [-10, 0])}px)`,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      border: `1px solid ${colors.panelBorder}`,
+                      background: "rgba(46, 217, 196, 0.14)",
+                      color: colors.accent,
+                      fontSize: 19,
+                      fontFamily: monoFont,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {index + 1}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <div style={{ fontSize: 25, lineHeight: 1.12, fontWeight: 650 }}>
+                      {step.title}
+                    </div>
+                    <div style={{ fontSize: 20, lineHeight: 1.28, color: colors.muted }}>
+                      {step.detail}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div
+          style={{
+            borderRadius: 22,
+            border: `1px solid ${colors.panelBorder}`,
+            background: colors.panel,
+            padding: "18px 20px 20px",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 25,
+              color: colors.accentWarm,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              marginBottom: 10,
+            }}
+          >
+            Activity Stream
+          </div>
+          <div
+            style={{
+              borderRadius: 16,
+              border: `1px solid ${colors.panelBorder}`,
+              background: "rgba(3, 16, 22, 0.82)",
+              padding: "12px 14px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              flex: 1,
+              overflow: "hidden",
+            }}
+          >
+            {mcpActivityLines.map((line, index) => {
+              const lineReveal = spring({
+                frame: frame - 12 - index * 4,
+                fps,
+                config: { damping: 200 },
+              });
+
+              return (
+                <div
+                  key={line}
+                  style={{
+                    fontSize: 21,
+                    lineHeight: 1.25,
+                    color: colors.muted,
+                    fontFamily: monoFont,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    opacity: lineReveal,
+                    transform: `translateX(${interpolate(lineReveal, [0, 1], [-8, 0])}px)`,
+                  }}
+                >
+                  {line}
+                </div>
+              );
+            })}
+          </div>
+          <div
+            style={{
+              marginTop: 12,
+              borderRadius: 13,
+              border: "1px solid rgba(46, 217, 196, 0.35)",
+              background: "rgba(46, 217, 196, 0.14)",
+              padding: "10px 12px",
+              fontSize: 21,
+              lineHeight: 1.3,
+            }}
+          >
+            Tight compile/test/diagnostic cycles run inside Codex App without leaving the
+            MCP toolchain.
+          </div>
+        </div>
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+const ChallengesScene = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+
+  const latestSession = devlogSessions.at(-1);
+  const recentChallenges = [...devlogSessions]
+    .filter((session) => session.challengeSummary !== null)
+    .slice(-6)
+    .reverse();
+
+  const latestGoal = latestSession
+    ? truncate(latestSession.primaryGoal, 170)
+    : "No recent challenge log available.";
+  const latestDecision = latestSession?.humanDecisions
+    ? truncate(latestSession.humanDecisions, 140)
+    : "n/a";
+  const latestBottleneck = latestSession?.bottlenecksRemoved
+    ? truncate(latestSession.bottlenecksRemoved, 140)
+    : "n/a";
+
+  return (
+    <AbsoluteFill
+      style={{
+        padding: "84px 92px",
+        color: colors.text,
+        fontFamily: displayFont,
+      }}
+    >
+      <h2 style={{ margin: 0, fontSize: 62, letterSpacing: "-0.02em" }}>
+        Challenges Encountered
+      </h2>
+      <p style={{ margin: "12px 0 0", fontSize: 27, color: colors.muted }}>
+        Captured from devlogs, including the latest recovery note that documents how
+        behavior was restored.
+      </p>
+      <div
+        style={{
+          marginTop: 26,
+          display: "grid",
+          gridTemplateColumns: "1.05fr 0.95fr",
+          gap: 22,
+          flex: 1,
+        }}
+      >
+        <div
+          style={{
+            borderRadius: 22,
+            border: `1px solid ${colors.panelBorder}`,
+            background: colors.panel,
+            padding: "20px 22px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              display: "inline-flex",
+              alignSelf: "flex-start",
+              borderRadius: 999,
+              border: "1px solid rgba(255, 190, 89, 0.45)",
+              background: "rgba(255, 190, 89, 0.15)",
+              color: colors.accentWarm,
+              fontSize: 18,
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+              padding: "7px 11px",
+            }}
+          >
+            Latest Recovery Action
+          </div>
+          <div
+            style={{
+              borderRadius: 16,
+              border: `1px solid ${colors.panelBorder}`,
+              background: "rgba(8, 32, 46, 0.68)",
+              padding: "12px 14px",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: monoFont,
+                fontSize: 22,
+                color: colors.accentWarm,
+                marginBottom: 6,
+              }}
+            >
+              {latestSession?.clockTime ?? "n/a"} PST
+            </div>
+            <div
+              style={{
+                fontSize: 30,
+                lineHeight: 1.12,
+                fontWeight: 700,
+              }}
+            >
+              {latestSession?.challengeSummary ?? "No challenge summary available."}
+            </div>
+          </div>
+          <div
+            style={{
+              borderRadius: 14,
+              border: `1px solid ${colors.panelBorder}`,
+              background: "rgba(8, 32, 46, 0.6)",
+              padding: "12px 14px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}
+          >
+            {[
+              `Goal: ${latestGoal}`,
+              `Bottleneck removed: ${latestBottleneck}`,
+              `Human decision: ${latestDecision}`,
+            ].map((line, index) => {
+              const reveal = spring({
+                frame: frame - 8 - index * 5,
+                fps,
+                config: { damping: 200 },
+              });
+
+              return (
+                <div
+                  key={line}
+                  style={{
+                    fontSize: 22,
+                    lineHeight: 1.28,
+                    color: colors.muted,
+                    opacity: reveal,
+                    transform: `translateX(${interpolate(reveal, [0, 1], [-10, 0])}px)`,
+                  }}
+                >
+                  {line}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div
+          style={{
+            borderRadius: 22,
+            border: `1px solid ${colors.panelBorder}`,
+            background: colors.panel,
+            padding: "18px 20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 24,
+              color: colors.accentWarm,
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+            }}
+          >
+            Recent Challenge Stream
+          </div>
+          <div
+            style={{
+              borderRadius: 14,
+              border: `1px solid ${colors.panelBorder}`,
+              background: "rgba(3, 16, 22, 0.82)",
+              padding: "10px 12px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              flex: 1,
+              overflow: "hidden",
+            }}
+          >
+            {recentChallenges.map((session, index) => {
+              const reveal = spring({
+                frame: frame - 12 - index * 4,
+                fps,
+                config: { damping: 200 },
+              });
+              const line = session.challengeSummary ?? session.primaryGoal;
+
+              return (
+                <div
+                  key={session.id}
+                  style={{
+                    borderRadius: 11,
+                    border: `1px solid ${colors.panelBorder}`,
+                    background: "rgba(8, 32, 46, 0.64)",
+                    padding: "8px 10px",
+                    display: "grid",
+                    gridTemplateColumns: "78px 1fr",
+                    gap: 10,
+                    opacity: reveal,
+                    transform: `translateY(${interpolate(reveal, [0, 1], [8, 0])}px)`,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: monoFont,
+                      fontSize: 20,
+                      color: colors.accent,
+                    }}
+                  >
+                    {session.clockTime}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 20,
+                      lineHeight: 1.25,
+                      color: colors.muted,
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {line}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 10,
+            }}
+          >
+            <div
+              style={{
+                borderRadius: 11,
+                border: `1px solid ${colors.panelBorder}`,
+                background: "rgba(8, 32, 46, 0.64)",
+                padding: "8px 10px",
+                fontSize: 20,
+                color: colors.muted,
+              }}
+            >
+              Challenge entries: {devlogSummary.challengeSessionCount}
+            </div>
+            <div
+              style={{
+                borderRadius: 11,
+                border: `1px solid ${colors.panelBorder}`,
+                background: "rgba(8, 32, 46, 0.64)",
+                padding: "8px 10px",
+                fontSize: 20,
+                color: colors.muted,
+              }}
+            >
+              Latest at {devlogSummary.lastSession} PT
+            </div>
+          </div>
+        </div>
       </div>
     </AbsoluteFill>
   );
@@ -1002,6 +1605,8 @@ export const HackathonDevlogComposition = () => {
 
   const introDuration = 5 * fps;
   const skillsDuration = 7 * fps;
+  const techFlowDuration = 8 * fps;
+  const challengesDuration = 8 * fps;
   const kpiDuration = 8 * fps;
   const timelineDuration = 11 * fps;
   const impactDuration = 12 * fps;
@@ -1021,20 +1626,47 @@ export const HackathonDevlogComposition = () => {
       </Sequence>
       <Sequence
         from={introDuration + skillsDuration}
+        durationInFrames={techFlowDuration}
+        premountFor={fps}
+      >
+        <TechnicalFlowScene />
+      </Sequence>
+      <Sequence
+        from={introDuration + skillsDuration + techFlowDuration}
+        durationInFrames={challengesDuration}
+        premountFor={fps}
+      >
+        <ChallengesScene />
+      </Sequence>
+      <Sequence
+        from={introDuration + skillsDuration + techFlowDuration + challengesDuration}
         durationInFrames={kpiDuration}
         premountFor={fps}
       >
         <KpiScene />
       </Sequence>
       <Sequence
-        from={introDuration + skillsDuration + kpiDuration}
+        from={
+          introDuration +
+          skillsDuration +
+          techFlowDuration +
+          challengesDuration +
+          kpiDuration
+        }
         durationInFrames={timelineDuration}
         premountFor={fps}
       >
         <TimelineScene />
       </Sequence>
       <Sequence
-        from={introDuration + skillsDuration + kpiDuration + timelineDuration}
+        from={
+          introDuration +
+          skillsDuration +
+          techFlowDuration +
+          challengesDuration +
+          kpiDuration +
+          timelineDuration
+        }
         durationInFrames={impactDuration}
         premountFor={fps}
       >

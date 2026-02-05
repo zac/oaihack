@@ -16,11 +16,16 @@ export type DevlogSession = {
   timeSavedLabel: string | null;
   timeSavedRangeMinutes: [number, number] | null;
   codexActionCount: number;
+  beforeAfter: string | null;
+  bottlenecksRemoved: string | null;
+  humanDecisions: string | null;
+  challengeSummary: string | null;
 };
 
 export type DevlogSummary = {
   sessionCount: number;
   testedSessionCount: number;
+  challengeSessionCount: number;
   uniqueTools: string[];
   totalCodexActions: number;
   totalTimeRangeMinutes: [number, number];
@@ -45,7 +50,11 @@ export const devlogSessions: DevlogSession[] = [
       30,
       60
     ],
-    "codexActionCount": 4
+    "codexActionCount": 4,
+    "beforeAfter": "Manual cataloging and templating replaced with an automated skill and structured entry.",
+    "bottlenecksRemoved": "Repetitive setup steps for logging and consistent format.",
+    "humanDecisions": "Which skills to highlight and the focus on hackathon startup.",
+    "challengeSummary": "Bottleneck: Repetitive setup steps for logging and consistent format."
   },
   {
     "id": "2026-02-05_1054-agents-hackathon-focus",
@@ -63,7 +72,11 @@ export const devlogSessions: DevlogSession[] = [
       20,
       30
     ],
-    "codexActionCount": 2
+    "codexActionCount": 2,
+    "beforeAfter": "manual doc drafting and repo orientation vs. a structured, ready-to-use agent guide.",
+    "bottlenecksRemoved": "consolidating skill usage guidance and MVP focus into one place.",
+    "humanDecisions": "confirm scope and MVP priorities.",
+    "challengeSummary": "Bottleneck: consolidating skill usage guidance and MVP focus into one place."
   },
   {
     "id": "2026-02-05_1202-swiftuirender-v1-implementation",
@@ -84,7 +97,11 @@ export const devlogSessions: DevlogSession[] = [
       120,
       180
     ],
-    "codexActionCount": 7
+    "codexActionCount": 7,
+    "beforeAfter": "manual package scaffolding and runtime plumbing vs. end-to-end implementation (APIs, runtime, tests, and demo wiring) completed in one pass.",
+    "bottlenecksRemoved": "architecture setup, patch engine wiring, style subset mapping, snapshot test setup, and project build validation loop.",
+    "humanDecisions": "public entrypoint shape, patch op parity, style subset scope, guardrail policy, and snapshot/LFS policy.",
+    "challengeSummary": "Bottleneck: architecture setup, patch engine wiring, style subset mapping, snapshot test setup, and project build validation loop."
   },
   {
     "id": "2026-02-05_1240-chat-harness-swiftuirender-integration",
@@ -104,7 +121,11 @@ export const devlogSessions: DevlogSession[] = [
       120,
       180
     ],
-    "codexActionCount": 6
+    "codexActionCount": 6,
+    "beforeAfter": "manually auditing and reconciling evolving SwiftUIRender internals with app integration would require repeated compile/test loops; Codex handled architecture review, wiring adjustments, and validation in one pass.",
+    "bottlenecksRemoved": "Cross-module API surface verification",
+    "humanDecisions": "Prioritize JSON-driven catalog previews over hand-built placeholders",
+    "challengeSummary": "Bottleneck: Cross-module API surface verification"
   },
   {
     "id": "2026-02-05_1252-chat-harness-previews",
@@ -124,7 +145,11 @@ export const devlogSessions: DevlogSession[] = [
       45,
       75
     ],
-    "codexActionCount": 5
+    "codexActionCount": 5,
+    "beforeAfter": "Previewing required running live stream flows to see varied bubble states; seeded snapshots now show those states instantly in Xcode previews.",
+    "bottlenecksRemoved": "manual stream setup, waiting for async events to populate transcript UI, repeated run cycles to check bubble styling",
+    "humanDecisions": "which transcript scenarios to represent in preview (completed, streaming, error); keeping SwiftUIRender library logic unchanged and harness-only",
+    "challengeSummary": "Bottleneck: manual stream setup, waiting for async events to populate transcript UI, repeated run cycles to check bubble styling"
   },
   {
     "id": "2026-02-05_1354-chat-harness-polished-takeover-flow",
@@ -144,7 +169,11 @@ export const devlogSessions: DevlogSession[] = [
       120,
       180
     ],
-    "codexActionCount": 6
+    "codexActionCount": 6,
+    "beforeAfter": "Coordinating reducer, streaming, payload lifecycle, and UI role rendering would have required many manual iterations; Codex handled cross-file refactor + validation loop quickly.",
+    "bottlenecksRemoved": "stream/reducer wiring across files, deterministic fixture scaffolding, targeted test construction, compile/test debug loop",
+    "humanDecisions": "takeover UX rules, submit-arrow policy, debug JSON scope, clear-reset semantics, UI test deferral",
+    "challengeSummary": "Bottleneck: stream/reducer wiring across files, deterministic fixture scaffolding, targeted test construction, compile/test debug loop"
   },
   {
     "id": "2026-02-05_1413-devlog-remotion-visualization",
@@ -163,7 +192,11 @@ export const devlogSessions: DevlogSession[] = [
       60,
       90
     ],
-    "codexActionCount": 5
+    "codexActionCount": 5,
+    "beforeAfter": "moving from blank Remotion starter files to an animated, data-backed judging narrative was completed in one end-to-end pass (parser + composition + wiring).",
+    "bottlenecksRemoved": "manual copy/paste of devlog stats, one-off visual mock setup, and ad-hoc script orchestration.",
+    "humanDecisions": "narrative emphasis (judging rubric mapping), scene ordering, and visual style direction for the hackathon demo.",
+    "challengeSummary": "Bottleneck: manual copy/paste of devlog stats, one-off visual mock setup, and ad-hoc script orchestration."
   },
   {
     "id": "2026-02-05_1441-textfield-input-traits",
@@ -184,7 +217,11 @@ export const devlogSessions: DevlogSession[] = [
       30,
       45
     ],
-    "codexActionCount": 5
+    "codexActionCount": 5,
+    "beforeAfter": "manual text input trait wiring and edge-case coverage vs. fast end-to-end implementation with compiler model changes, renderer behavior, and tests in one pass.",
+    "bottlenecksRemoved": "deciding field-kind propagation through compiler -> node model -> renderer, and quickly validating behavior with targeted tests.",
+    "humanDecisions": "confirm product requirement to use typed fields whenever intent is known.",
+    "challengeSummary": "Bottleneck: deciding field-kind propagation through compiler -> node model -> renderer, and quickly validating behavior with targeted tests."
   },
   {
     "id": "2026-02-05_1442-chat-harness-debug-sheet-polish",
@@ -204,29 +241,106 @@ export const devlogSessions: DevlogSession[] = [
       60,
       120
     ],
-    "codexActionCount": 6
+    "codexActionCount": 6,
+    "beforeAfter": "Debugging mixed SwiftUI view-state and async reducer timing across composer/takeover/clear interactions is normally high-friction; Codex handled iterative root-cause analysis and patch/test loops quickly.",
+    "bottlenecksRemoved": "async state race diagnosis, rapid MCP feedback cycles, repeated UI behavior patching without manual project context switching",
+    "humanDecisions": "desired debug affordance interaction model (sheet), detent behavior, takeover height policy",
+    "challengeSummary": "Bottleneck: async state race diagnosis, rapid MCP feedback cycles, repeated UI behavior patching without manual project context switching"
+  },
+  {
+    "id": "2026-02-05_1513-patch-stream-fanout",
+    "sourceFile": "codex-log/2026-02-05_1513-patch-stream-fanout.md",
+    "dateTime": "2026-02-05 15:13 PST",
+    "clockTime": "15:13",
+    "primaryGoal": "Fix intermittent render guardrail where `badge` appears missing during streaming patch playback.",
+    "tools": [
+      "terminal",
+      "apply_patch",
+      "Xcode MCP (test runner)"
+    ],
+    "testsRun": "RenderChat test plan (`12 total: 10 passed, 2 skipped, 0 failed`) + targeted SwiftUIRender filtered tests (`3 passed`)",
+    "hasTests": true,
+    "timeSavedLabel": "1-2 hours.",
+    "timeSavedRangeMinutes": [
+      60,
+      120
+    ],
+    "codexActionCount": 5,
+    "beforeAfter": "Manual UI-only debugging of flaky stream behavior was ambiguous; Codex quickly narrowed root cause with targeted code-path inspection and implemented a deterministic fix.",
+    "bottlenecksRemoved": "stream consumer ambiguity, lack of regression coverage for multi-consumer patch playback.",
+    "humanDecisions": "confirm desired behavior is deterministic fan-out/replay rather than single-consumer semantics.",
+    "challengeSummary": "Bottleneck: stream consumer ambiguity, lack of regression coverage for multi-consumer patch playback."
+  },
+  {
+    "id": "2026-02-05_1523-generated-form-visible-in-transcript",
+    "sourceFile": "codex-log/2026-02-05_1523-generated-form-visible-in-transcript.md",
+    "dateTime": "2026-02-05 15:23 PST",
+    "clockTime": "15:23",
+    "primaryGoal": "Fix generated form flow where assistant text appears but the intake UI is not visible.",
+    "tools": [
+      "terminal",
+      "apply_patch",
+      "Xcode MCP"
+    ],
+    "testsRun": "targeted RenderChat tests passed for updated/new scenarios; some MCP test invocations timed out while polling full suite.",
+    "hasTests": true,
+    "timeSavedLabel": "30-60 minutes.",
+    "timeSavedRangeMinutes": [
+      30,
+      60
+    ],
+    "codexActionCount": 3,
+    "beforeAfter": "The issue looked like rendering failure but root cause was transcript visibility behavior. Codex narrowed this quickly by tracing `renderStarted` reducer branches.",
+    "bottlenecksRemoved": "hidden generated form content in transcript; brittle test timing assumption.",
+    "humanDecisions": "accept showing generated form in transcript even when takeover composer is active.",
+    "challengeSummary": "Bottleneck: hidden generated form content in transcript; brittle test timing assumption."
+  },
+  {
+    "id": "2026-02-05_1528-reverted-form-visibility",
+    "sourceFile": "codex-log/2026-02-05_1528-reverted-form-visibility.md",
+    "dateTime": "2026-02-05 15:28 PST",
+    "clockTime": "15:28",
+    "primaryGoal": "Document reverting the generated-form visibility change to restore previous behavior.",
+    "tools": [
+      "terminal"
+    ],
+    "testsRun": "none",
+    "hasTests": false,
+    "timeSavedLabel": "10-15 minutes.",
+    "timeSavedRangeMinutes": [
+      10,
+      15
+    ],
+    "codexActionCount": 3,
+    "beforeAfter": "Instead of further debugging, this session focused on preserving momentum by documenting the rollback decision clearly.",
+    "bottlenecksRemoved": "ambiguity about why the prior behavior is now present.",
+    "humanDecisions": "user chose to revert and avoid additional fixes for now.",
+    "challengeSummary": "Rollback: Document reverting the generated-form visibility change to restore previous behavior."
   }
 ];
 
 export const devlogSummary: DevlogSummary = {
-  "sessionCount": 9,
-  "testedSessionCount": 6,
+  "sessionCount": 12,
+  "testedSessionCount": 8,
+  "challengeSessionCount": 12,
   "uniqueTools": [
     "apply_patch",
     "swift test",
     "terminal",
+    "Xcode MCP",
     "Xcode MCP (build/tests)",
     "Xcode MCP (BuildProject, RunSomeTests, ExecuteSnippet, XcodeListNavigatorIssues)",
     "Xcode MCP (BuildProject, RunSomeTests, XcodeListNavigatorIssues, ExecuteSnippet)",
     "Xcode MCP (BuildProject)",
+    "Xcode MCP (test runner)",
     "xcode MCP build/test",
     "Xcode MCP BuildProject/XcodeListNavigatorIssues"
   ],
-  "totalCodexActions": 46,
+  "totalCodexActions": 57,
   "totalTimeRangeMinutes": [
-    605,
-    960
+    705,
+    1155
   ],
   "firstSession": "10:34",
-  "lastSession": "14:42"
+  "lastSession": "15:28"
 };
