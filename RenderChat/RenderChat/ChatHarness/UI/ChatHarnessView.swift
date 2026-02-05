@@ -236,7 +236,7 @@ struct ChatHarnessView: View {
                 )
             }
         }
-        .padding(.horizontal)
+        .padding(.horizontal, 20)
     }
 
     private func takeoverComposer(_ takeover: TakeoverComposerState) -> some View {
@@ -300,16 +300,11 @@ struct ChatHarnessView: View {
             Image(systemName: systemName)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Color.black)
-                .frame(width: 36, height: 36)
-                .background(Color.white, in: Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.14), radius: 4, x: 0, y: 2)
+                .frame(width: 44, height: 44)
+                .opacity(disabled ? 0.8 : 1.0)
+                .glassEffect(.regular, in: .circle)
         }
         .buttonStyle(.plain)
-        .opacity(disabled ? 0.4 : 1.0)
         .disabled(disabled)
         .accessibilityIdentifier(accessibilityID)
     }
