@@ -164,26 +164,69 @@ export const devlogSessions: DevlogSession[] = [
       90
     ],
     "codexActionCount": 5
+  },
+  {
+    "id": "2026-02-05_1441-textfield-input-traits",
+    "sourceFile": "codex-log/2026-02-05_1441-textfield-input-traits.md",
+    "dateTime": "2026-02-05 14:41 PST",
+    "clockTime": "14:41",
+    "primaryGoal": "Add typed SwiftUI text field behavior for known field types (email/password/etc.) and verify with tests/build.",
+    "tools": [
+      "terminal",
+      "apply_patch",
+      "swift test",
+      "Xcode MCP (BuildProject)"
+    ],
+    "testsRun": "`swift test` in `/Users/zac/Projects/personal/oaihack/SwiftUIRender` (passes, including new text-field tests)",
+    "hasTests": true,
+    "timeSavedLabel": "30-45 minutes.",
+    "timeSavedRangeMinutes": [
+      30,
+      45
+    ],
+    "codexActionCount": 5
+  },
+  {
+    "id": "2026-02-05_1442-chat-harness-debug-sheet-polish",
+    "sourceFile": "codex-log/2026-02-05_1442-chat-harness-debug-sheet-polish.md",
+    "dateTime": "2026-02-05 14:42 PST",
+    "clockTime": "14:42",
+    "primaryGoal": "Stabilize chat composer behavior (send/clear), refine takeover sizing, and convert debug JSON into a polished sheet interaction.",
+    "tools": [
+      "terminal",
+      "apply_patch",
+      "Xcode MCP (BuildProject, RunSomeTests, XcodeListNavigatorIssues, ExecuteSnippet)"
+    ],
+    "testsRun": "RenderChat targeted unit suite via MCP (`8 passed, 0 failed`), plus repeated build checks (`project built successfully`)",
+    "hasTests": true,
+    "timeSavedLabel": "1-2 hours",
+    "timeSavedRangeMinutes": [
+      60,
+      120
+    ],
+    "codexActionCount": 6
   }
 ];
 
 export const devlogSummary: DevlogSummary = {
-  "sessionCount": 7,
-  "testedSessionCount": 4,
+  "sessionCount": 9,
+  "testedSessionCount": 6,
   "uniqueTools": [
     "apply_patch",
     "swift test",
     "terminal",
     "Xcode MCP (build/tests)",
     "Xcode MCP (BuildProject, RunSomeTests, ExecuteSnippet, XcodeListNavigatorIssues)",
+    "Xcode MCP (BuildProject, RunSomeTests, XcodeListNavigatorIssues, ExecuteSnippet)",
+    "Xcode MCP (BuildProject)",
     "xcode MCP build/test",
     "Xcode MCP BuildProject/XcodeListNavigatorIssues"
   ],
-  "totalCodexActions": 35,
+  "totalCodexActions": 46,
   "totalTimeRangeMinutes": [
-    515,
-    795
+    605,
+    960
   ],
   "firstSession": "10:34",
-  "lastSession": "14:13"
+  "lastSession": "14:42"
 };
